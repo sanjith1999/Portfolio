@@ -1,14 +1,13 @@
 // models/Project.ts
 import mongoose, { Document, Model } from 'mongoose';
 
-// Column interface
+// Add the new types to the Column interface
 export interface Column {
   id: string;
   width?: number;
-  type: 'text' | 'image' | 'points' | 'equation';
-  content: string | string[]; // string for text/image/equation, string[] for bullet points
+  type: 'text' | 'image' | 'points' | 'equation' | 'blank' | 'paragraphs'; 
+  content: string | string[]; // Can be empty string for 'blank'
 }
-
 // SubSection interface
 export interface SubSection {
   id: string;
@@ -20,12 +19,13 @@ export interface SubSection {
   columns?: Column[];
 }
 
-// Section interface
+// Add showInToc to Section
 export interface Section {
   id: string;
   heading: string;
+  showInToc?: boolean; // <-- NEW
   content: string[];
-  image?: string; // data URL
+  image?: string; 
   subSections?: SubSection[];
   columns?: Column[];
 }

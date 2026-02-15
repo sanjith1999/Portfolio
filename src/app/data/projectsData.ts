@@ -33,17 +33,17 @@ export interface SubSection {
 export interface Section {
   id: string;
   heading: string;
+  showInToc?: boolean; // <-- NEW
   content: string[];
-  image?: string;
+  image?: string; 
   subSections?: SubSection[];
   columns?: Column[];
 }
-
-interface Column {
+export interface Column {
   id: string;
   width?: number;
-  type: 'text' | 'image' | 'points' | 'equation';
-  content: string | string[]; // string for text/image, string[] for bullet points
+  type: 'text' | 'image' | 'points' | 'equation' | 'blank' | 'paragraphs'; 
+  content: string | string[]; // Can be empty string for 'blank'
 }
 
 // export const projectsData: Project[] = [
