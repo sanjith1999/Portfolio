@@ -18,11 +18,9 @@ import { Project } from '@/app/data/projectsData';
 import AdminHeader from '@/app/components/adminHeader';
 import { usePrivateProjectStore } from '@/store/private-project-store';
 import { Types } from 'mongoose';
+import { User } from '@/app/models/user';
 export default function ProjectsPage() {
-  type User = {
-    loggedIn: boolean;
-    role?: string;
-  };
+
   const [user, setUser] = useState<User | null>(null);
   const [projects, setProjects] = useState<Project[]>(
     usePrivateProjectStore((state) => state.projects)

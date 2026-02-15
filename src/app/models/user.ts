@@ -6,6 +6,11 @@ export interface IUser extends Document {
   role: 'admin' | 'user';
 }
 
+ export type User = {
+    loggedIn: boolean;
+    role?: string;
+  };
+
 const UserSchema = new Schema<IUser>(
   {
     email: { type: String, required: true, unique: true },

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import {
-  Box, Container, Drawer, Fab, IconButton, List,
+  Box, Button, Container, Drawer, Fab, IconButton, List,
   ListItem, ListItemButton, ListItemIcon, ListItemText,
   Paper, Typography, useMediaQuery, useTheme, Zoom,
 } from '@mui/material';
@@ -11,12 +11,15 @@ import MenuIcon from '@mui/icons-material/Menu';
 import CircleIcon from '@mui/icons-material/Circle';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import { BlockMath } from 'react-katex';
+import { useRouter } from 'next/navigation';
 
 import 'react-quill-new/dist/quill.snow.css'; 
 
 import { Project, Block } from '@/app/data/projectsData'; 
 import { useProjectStore } from '@/store/public-project-store';
 import LoadingBackdrop from './LoadingBackdrop';
+import { User } from '../models/user';
+import EditIcon from '@mui/icons-material/Edit';
 
 // Safely strips HTML from legacy rich-text headings for the TOC & Viewer
 const stripHtml = (html?: string | string[]) => {
@@ -38,7 +41,8 @@ export default function ProjectPreview() {
   const [project, setProject] = useState<Project | null>(getProject(id || '') ?? null);
   const [open, setOpen] = useState(false);
   const [loadingProject, setProjectLoading] = useState(false);
-
+  const [user, setUser] = useState<User | null>(null);
+const router = useRouter();
   const handleScroll = (blockId: string) => {
     const element = document.getElementById(blockId);
     if (element) {
@@ -64,6 +68,13 @@ export default function ProjectPreview() {
     }
     fetchProject();
   }, [id, project]);
+
+    // 1️⃣ Auth check
+    useEffect(() => {
+      fetch('/api/auth/me')
+        .then((res) => res.json())
+        .then((data) => setUser(data));
+    }, []);
 
   if (!project) return <Container sx={{ py: 8 }}><Typography>Loading project...</Typography></Container>;
   if (loadingProject) return <LoadingBackdrop open={loadingProject} />;
@@ -115,16 +126,24 @@ export default function ProjectPreview() {
         return (
           <Box 
             key={block.id} 
-            className="ql-editor" // Applies Quill formats safely
+            className="ql-editor" // Applies Quill sizes/colors
             sx={{ 
-              p: 0, 
-              mb: isNested ? 1 : 2, 
-              lineHeight: 1.8, 
+              padding: '0 !important', // Kills Quill's default 15px container padding
+              margin: '0 !important',
+              marginBottom: isNested ? '6px !important' : '16px !important', // Tiny 6px gap if inside a column
+              lineHeight: 1.7, 
               fontSize: '1.1rem', 
               color: 'text.primary',
-              // Force Justify and fix excessive internal spacing from Quill <p> tags
-              '& p': { textAlign: 'justify', mb: 1.5, mt: 0 }, 
-              '& p:last-of-type': { mb: 0 }, 
+              
+              // 🔥 NUCLEAR OPTION: Strips all browser margins from internal HTML tags
+              '& p, & h1, & h2, & h3, & h4, & h5, & h6': { 
+                textAlign: 'justify !important', 
+                margin: '0 !important', 
+                padding: '0 !important' 
+              }, 
+              '& p + p': {
+                marginTop: '6px !important' // If one block has multiple paragraphs, give them a tiny gap
+              },
               '& a': { color: 'primary.main' } 
             }} 
             dangerouslySetInnerHTML={{ __html: content as string }} 
@@ -277,14 +296,18 @@ export default function ProjectPreview() {
         </Fab>
         )}
 
+        {user?.loggedIn  &&(
+          <Fab color="primary"  onClick={() => router.push(`/admin/projects/${id}`)}  sx={{ position: 'fixed', right: 30, top: 100, zIndex: 1200 }}>
+          <EditIcon />
+        </Fab>
+        )}
+
         <Box sx={{ maxWidth: '1500px', mx: 'auto', mt: isSmallScreen ? 2 : 0 }}>
           {/* Paper respects Dark Mode by using background.paper and generic divider colors */}
-          <Paper elevation={0} sx={{ p: { xs: 3, md: 8 }, borderRadius: 4, bgcolor: 'background.paper', minHeight: '80vh', border: '1px solid', borderColor: 'divider' }}>
-            
+          <Paper elevation={0} sx={{ p: { xs: 3, md: 8 }, borderRadius: 4, bgcolor: 'background.paper', minHeight: '80vh', border: '1px solid', borderColor: 'divider' }}>              
             <Typography variant="h3" fontWeight="bold" color="text.primary" gutterBottom sx={{ mb: 4 }}>
               {project.title}
             </Typography>
-            
             {project.image && (
               <Box component="img" src={project.image} sx={{ width: '100%', maxHeight: '400px', objectFit: 'cover', borderRadius: 3, mb: 6 }} />
             )}

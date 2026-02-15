@@ -42,7 +42,7 @@ export default function AllProjects() {
   //   window.scrollTo(0, 0);
   //   router.push(`/project/${projectId}`);
   // };
-  const handleViewDetails = (projectId: Types.ObjectId | undefined) => {
+  const handleViewDetails = (projectId: string | Types.ObjectId | undefined) => {
     setLoading(true);
     window.scrollTo(0, 0);
 
