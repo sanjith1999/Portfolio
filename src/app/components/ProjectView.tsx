@@ -236,15 +236,25 @@ export default function ProjectPreview() {
 
       {/* Main Content Area */}
       <Box sx={{ flexGrow: 1, height: '100%', overflowY: 'auto', p: { xs: 2, md: 6 }, scrollBehavior: 'smooth' }}>
-        {!open && !isSmallScreen && (
+        {/* {!open && !isSmallScreen && (
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 5, position: 'sticky', top: 0, bgcolor: '#fcfcfc', zIndex: 10, py: 2 }}>
             <IconButton onClick={() => setOpen(true)} sx={{ bgcolor: 'white', boxShadow: 1, '&:hover': { bgcolor: '#f0f0f0' } }}>
               <MenuIcon />
             </IconButton>
           </Box>
+        )} */}
+        {!open && !isSmallScreen && (
+          <Fab color="primary" onClick={() => setOpen(!open)} sx={{ position: 'fixed', left: 24, top: 100, zIndex: 1200 }}>
+          {open ? <ChevronLeftIcon /> : <MenuIcon />}
+        </Fab>
+        )}
+        {open && !isSmallScreen && (
+          <Fab color="primary" onClick={() => setOpen(!open)} sx={{ position: 'fixed', left: 300, top: 100, zIndex: 1200 }}>
+          {open ? <ChevronLeftIcon /> : <MenuIcon />}
+        </Fab>
         )}
 
-        <Container maxWidth="md" sx={{ mt: isSmallScreen ? 2 : 0 }}>
+        <Box sx={{ maxWidth: '1500px', mx: 'auto', mt: isSmallScreen ? 2 : 0 }}>
           <Paper elevation={0} sx={{ p: { xs: 3, md: 8 }, borderRadius: 4, bgcolor: 'white', minHeight: '80vh', border: '1px solid #f0f0f0' }}>
             <Typography variant="h3" fontWeight="bold" gutterBottom sx={{ mb: 4 }}>
               {project.title}
@@ -262,7 +272,7 @@ export default function ProjectPreview() {
               </Typography>
             )}
           </Paper>
-        </Container>
+        </Box>
       </Box>
 
       <Zoom in={isSmallScreen}>

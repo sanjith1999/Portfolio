@@ -69,10 +69,10 @@ export default function ProjectsPage() {
     }
   }
 
-  const handleEditView = (projectId: Types.ObjectId | undefined) => {
+  const handleEditView = (projectId: string | Types.ObjectId | undefined) => {
     router.push(`/admin/projects/${projectId}`);
   };
-  const handleView = (projectId: Types.ObjectId | undefined) => {
+  const handleView = (projectId: string | Types.ObjectId | undefined) => {
     router.push(`/admin/projects/view/${projectId}`);
   };
 

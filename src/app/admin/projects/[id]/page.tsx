@@ -9,6 +9,7 @@ import { Project } from '@/app/data/projectsData';
 import Image from 'next/image';
 import AdminHeader from '@/app/components/adminHeader';
 import { usePrivateProjectStore } from '@/store/private-project-store';
+import { ProjectDoc } from '@/app/models/projects';
 
 export default function ProjectDetailPage() {
   const params = useParams();
@@ -107,7 +108,10 @@ export default function ProjectDetailPage() {
 
         <Typography variant="h6">Edit project</Typography>
         <ProjectForm
-          initial={project}
+          initial={{
+            ...project,
+            _id: typeof project._id === 'string' ? project._id : project._id,
+          } as Partial<ProjectDoc>}
           submitLabel="Update"
           submitMethod="PUT"
           onSaved={(updated) => {

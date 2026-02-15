@@ -45,7 +45,7 @@ export default function ProjectDetailPage() {
   return (
     <Box sx={{ p: 3 }}>
       {/* AppBar */}
-      <AppBar position="sticky" color="inherit" elevation={1}>
+      <AppBar position="sticky" color="inherit" elevation={1}  >
         <Toolbar>
           <IconButton edge="start" color="inherit" onClick={handleBackAllProject} sx={{ mr: 2 }}>
             <HomeIcon />
