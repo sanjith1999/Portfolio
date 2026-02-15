@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import {
-  Box, Container, Drawer, Fab, Grid, IconButton, List,
+  Box, Container, Drawer, Fab, IconButton, List,
   ListItem, ListItemButton, ListItemIcon, ListItemText,
   Paper, Typography, useMediaQuery, useTheme, Zoom,
 } from '@mui/material';
@@ -12,12 +12,13 @@ import CircleIcon from '@mui/icons-material/Circle';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import { BlockMath } from 'react-katex';
 
-import { Project, Section, SubSection, Column } from '@/app/data/projectsData';
+// Update your imports to match your new types locations
+import { Project, Block } from '@/app/data/projectsData'; 
 import { useProjectStore } from '@/store/public-project-store';
 import LoadingBackdrop from './LoadingBackdrop';
 
 export default function ProjectPreview() {
-  const drawerWidth = 240;
+  const drawerWidth = 260;
   const params = useParams();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const theme = useTheme();
@@ -28,9 +29,13 @@ export default function ProjectPreview() {
   const [open, setOpen] = useState(false);
   const [loadingProject, setProjectLoading] = useState(false);
 
-  const handleScroll = (sectionId: string) => {
-    const section = document.getElementById(sectionId);
-    if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // Smooth scroll to headings
+  const handleScroll = (blockId: string) => {
+    const element = document.getElementById(blockId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    if (isSmallScreen) setOpen(false);
   };
 
   useEffect(() => {
@@ -54,53 +59,118 @@ export default function ProjectPreview() {
   if (!project) return <Container sx={{ py: 8 }}><Typography>Loading project...</Typography></Container>;
   if (loadingProject) return <LoadingBackdrop open={loadingProject} />;
 
-  // Filter sections that should appear in the TOC
-  const tocSections = project.sections.filter((sec) => sec.showInToc !== false);
+  const blocks = project.blocks || [];
 
-  // Helper to render Column/Widget content cleanly
-  const renderColumnContent = (col: Column) => {
-    switch (col.type) {
-      case 'text':
-        return <Typography>{col.content}</Typography>;
-      
-      case 'paragraphs':
-        const paras = Array.isArray(col.content) ? col.content : [col.content];
-        return paras.map((p, i) => (
-          <Typography key={i} sx={{ mb: 2 }}>{p}</Typography>
-        ));
+  // Generate Table of Contents from Heading blocks
+  const tocHeadings = blocks.filter(
+    (b) => b.type === 'heading1' || b.type === 'heading2'
+  );
 
-      case 'image':
+  // =========================================================
+  // RECURSIVE BLOCK RENDERER
+  // =========================================================
+  const renderBlock = (block: Block) => {
+    const content = block.content || '';
+    
+    switch (block.type) {
+      case 'heading1':
         return (
-          <Box component="img" src={col.content as string} alt="" sx={{ width: '100%', borderRadius: 2 }} />
+          <Typography 
+            key={block.id} 
+            id={block.id} 
+            variant="h4" 
+            sx={{ mt: 5, mb: 2, fontWeight: 'bold', scrollMarginTop: '80px', color: 'primary.main' }}
+          >
+            {content}
+          </Typography>
         );
 
-      case 'points':
-        const points = Array.isArray(col.content) ? col.content : [col.content];
+      case 'heading2':
         return (
-          <List sx={{ pt: 0 }}>
-            {points.map((pt, i) => (
-              <ListItem key={i} sx={{ py: 0.5, alignItems: 'flex-start' }}> {/* Fixed spacing here */}
-                <ListItemIcon sx={{ minWidth: 28, mt: 0.8 }}>
-                  <CircleIcon sx={{ fontSize: 8 }} />
-                </ListItemIcon>
-                <ListItemText primary={pt} primaryTypographyProps={{ sx: { wordBreak: 'break-word' } }} />
+          <Typography 
+            key={block.id} 
+            id={block.id} 
+            variant="h5" 
+            sx={{ mt: 4, mb: 2, fontWeight: '600', scrollMarginTop: '80px' }}
+          >
+            {content}
+          </Typography>
+        );
+
+      case 'paragraph':
+        const paras = Array.isArray(content) ? content : [content];
+        return paras.map((p, i) => (
+          <Typography key={`${block.id}-${i}`} sx={{ mb: 2, lineHeight: 1.8, color: 'text.primary', fontSize: '1.1rem' }}>
+            {p}
+          </Typography>
+        ));
+
+      case 'bullet_list':
+      case 'numbered_list':
+        const listItems = Array.isArray(content) ? content : [content];
+        return (
+          <List key={block.id} component={block.type === 'numbered_list' ? 'ol' : 'ul'} sx={{ pl: block.type === 'numbered_list' ? 4 : 0, mb: 2, listStyleType: block.type === 'numbered_list' ? 'decimal' : 'none' }}>
+            {listItems.map((item, idx) => (
+              <ListItem key={idx} sx={{ py: 0.5, alignItems: 'flex-start', display: block.type === 'numbered_list' ? 'list-item' : 'flex' }}>
+                {block.type === 'bullet_list' && (
+                  <ListItemIcon sx={{ minWidth: 28, mt: 1 }}>
+                    <CircleIcon sx={{ fontSize: 8, color: 'text.secondary' }} />
+                  </ListItemIcon>
+                )}
+                <ListItemText 
+                   primary={item} 
+                   primaryTypographyProps={{ sx: { fontSize: '1.1rem', lineHeight: 1.8 } }} 
+                />
               </ListItem>
             ))}
           </List>
         );
 
-      case 'equation':
-        const equations = Array.isArray(col.content) ? col.content : [col.content];
+      case 'image':
         return (
-          <Box sx={{ my: 2, textAlign: 'center', overflowX: 'auto' }}>
+          <Box key={block.id} sx={{ my: 4, textAlign: block.props?.align || 'center' }}>
+            <Box 
+              component="img" 
+              src={content as string} 
+              alt={block.props?.caption || "Project Image"} 
+              sx={{ maxWidth: '100%', borderRadius: 2, boxShadow: 1 }} 
+            />
+            {block.props?.caption && (
+              <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 1 }}>
+                {block.props.caption}
+              </Typography>
+            )}
+          </Box>
+        );
+
+      case 'equation':
+        const equations = Array.isArray(content) ? content : [content];
+        return (
+          <Box key={block.id} sx={{ my: 3, p: 2, bgcolor: '#f8f9fa', borderRadius: 2, overflowX: 'auto', textAlign: 'center' }}>
             {equations.map((line, i) => (
               <BlockMath key={i} math={line as string} />
             ))}
           </Box>
         );
 
-      case 'blank':
-        return <Box sx={{ minHeight: '20px' }} />; // Empty spacer
+      case 'columns':
+        if (!block.columns || block.columns.length === 0) return null;
+        return (
+          <Box key={block.id} sx={{ display: 'flex', flexWrap: { xs: 'wrap', md: 'nowrap' }, gap: 3, my: 4 }}>
+            {block.columns.map((col) => (
+              <Box 
+                key={col.id} 
+                sx={{ 
+                  width: { xs: '100%', md: `${col.width}%` }, 
+                  boxSizing: 'border-box' 
+                }}
+              >
+                {/* Recursively render blocks inside this column! */}
+                {col.blocks.map(nestedBlock => renderBlock(nestedBlock))}
+              </Box>
+            ))}
+          </Box>
+        );
 
       default:
         return null;
@@ -108,145 +178,105 @@ export default function ProjectPreview() {
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, height: '100vh', overflow: 'hidden' }}>
+    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, height: '100vh', overflow: 'hidden', bgcolor: '#fcfcfc' }}>
       
       {/* Sidebar TOC */}
       {isSmallScreen ? (
         <Drawer anchor="left" open={open} onClose={() => setOpen(false)} PaperProps={{ sx: { width: drawerWidth } }}>
-          <Box sx={{ p: 2 }}>
-            <Typography variant="h6" gutterBottom>{project.title}</Typography>
-            <List>
-              {tocSections.map((sec) => (
-                <ListItemButton key={sec.id} onClick={() => { handleScroll(sec.id); setOpen(false); }}>
-                  <ListItemText primary={sec.heading} />
+          <Box sx={{ p: 3 }}>
+            <Typography variant="h6" fontWeight="bold" gutterBottom>{project.title}</Typography>
+            <List sx={{ mt: 2 }}>
+              {tocHeadings.map((heading) => (
+                <ListItemButton key={heading.id} onClick={() => handleScroll(heading.id)} sx={{ borderRadius: 1, mb: 0.5 }}>
+                  <ListItemText 
+                    primary={heading.content} 
+                    primaryTypographyProps={{ 
+                      fontSize: heading.type === 'heading2' ? '0.9rem' : '1rem',
+                      fontWeight: heading.type === 'heading1' ? '600' : '400',
+                      ml: heading.type === 'heading2' ? 2 : 0, // Indent H2s slightly
+                      color: 'text.secondary'
+                    }} 
+                  />
                 </ListItemButton>
               ))}
             </List>
           </Box>
         </Drawer>
       ) : (
-        <Box sx={{ width: open ? drawerWidth : 0, transition: 'width 0.3s', bgcolor: 'background.paper', flexShrink: 0, borderRight: open ? '1px solid #ddd' : 'none', overflow: 'hidden' }}>
-          <Paper elevation={0} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, borderBottom: '1px solid #ddd' }}>
-              <Typography variant="h6" noWrap>{project.title}</Typography>
-              <IconButton onClick={() => setOpen(false)}><ChevronLeftIcon /></IconButton>
+        <Box sx={{ width: open ? drawerWidth : 0, transition: 'width 0.3s ease', bgcolor: 'background.paper', flexShrink: 0, borderRight: open ? '1px solid #eee' : 'none', overflow: 'hidden', boxShadow: open ? '2px 0 10px rgba(0,0,0,0.03)' : 'none' }}>
+          <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 3, borderBottom: '1px solid #eee' }}>
+              <Typography variant="subtitle1" fontWeight="bold" noWrap>{project.title}</Typography>
+              <IconButton onClick={() => setOpen(false)} size="small"><ChevronLeftIcon /></IconButton>
             </Box>
-            <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 1 }}>
+            <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 2 }}>
+              <Typography variant="overline" color="text.disabled" sx={{ ml: 2 }}>Contents</Typography>
               <List>
-                {tocSections.map((sec) => (
-                  <ListItemButton key={sec.id} onClick={() => handleScroll(sec.id)}>
-                    <ListItemText primary={sec.heading} />
+                {tocHeadings.map((heading) => (
+                  <ListItemButton key={heading.id} onClick={() => handleScroll(heading.id)} sx={{ borderRadius: 1, py: 0.5 }}>
+                    <ListItemText 
+                      primary={heading.content} 
+                      primaryTypographyProps={{ 
+                        fontSize: heading.type === 'heading2' ? '0.85rem' : '0.95rem',
+                        fontWeight: heading.type === 'heading1' ? '600' : '400',
+                        ml: heading.type === 'heading2' ? 2 : 0,
+                        color: heading.type === 'heading1' ? 'text.primary' : 'text.secondary'
+                      }} 
+                    />
                   </ListItemButton>
                 ))}
               </List>
             </Box>
-          </Paper>
+          </Box>
         </Box>
       )}
 
-      {/* Main Content */}
-      <Box sx={{ flexGrow: 1, width: '100%', height: '100%', overflowY: 'auto', p: { xs: 2, md: 4 }, scrollBehavior: 'smooth' }}>
+      {/* Main Content Area */}
+      <Box sx={{ flexGrow: 1, height: '100%', overflowY: 'auto', p: { xs: 2, md: 6 }, scrollBehavior: 'smooth' }}>
         
-        {/* Header Toggle */}
+        {/* Top Header Row */}
         {!open && !isSmallScreen && (
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-            <IconButton onClick={() => setOpen(true)}><MenuIcon /></IconButton>
-            <Typography variant="h4" sx={{ ml: 2, fontWeight: 'bold' }}>{project.title}</Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 5, position: 'sticky', top: 0, bgcolor: '#fcfcfc', zIndex: 10, py: 2 }}>
+            <IconButton onClick={() => setOpen(true)} sx={{ bgcolor: 'white', boxShadow: 1, '&:hover': { bgcolor: '#f0f0f0' } }}>
+              <MenuIcon />
+            </IconButton>
           </Box>
         )}
-        {isSmallScreen && <Typography variant="h5" sx={{ mb: 3, fontWeight: 'bold' }}>{project.title}</Typography>}
 
-        {/* Render Sections */}
-        <Grid container spacing={4}>
-          {project.sections.map((section: Section) => (
-            <Grid size={{ xs: 12}} key={section.id}>
-              <Paper sx={{ p: { xs: 2, md: 4 }, borderRadius: 3, boxShadow: 2, scrollMarginTop: '80px' }} id={section.id}>
-                
-                <Typography variant="h4" gutterBottom fontWeight="600" color="primary.main">
-                  {section.heading}
-                </Typography>
+        {/* The Notion-Style Document Paper */}
+        <Container maxWidth="md" sx={{ mt: isSmallScreen ? 2 : 0 }}>
+          <Paper elevation={0} sx={{ p: { xs: 3, md: 8 }, borderRadius: 4, bgcolor: 'white', minHeight: '80vh', border: '1px solid #f0f0f0' }}>
+            
+            {/* Document Title (H1 equivalent) */}
+            <Typography variant="h3" fontWeight="bold" gutterBottom sx={{ mb: 4 }}>
+              {project.title}
+            </Typography>
+            
+            {/* If there's a main cover image */}
+            {project.image && (
+              <Box component="img" src={project.image} sx={{ width: '100%', maxHeight: '400px', objectFit: 'cover', borderRadius: 3, mb: 6 }} />
+            )}
 
-                {/* Legacy Main Content & Image Layout */}
-                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4, mb: 4 }}>
-                  <Box sx={{ flex: 1 }}>
-                    {section.content?.map((para, i) => (
-                      <Typography key={i} sx={{ mb: 2, lineHeight: 1.7, color: 'text.secondary' }}>{para}</Typography>
-                    ))}
-                  </Box>
-                  {section.image && (
-                    <Box component="img" src={section.image} alt="" sx={{ flex: 1, width: '100%', maxWidth: 400, borderRadius: 2, objectFit: 'cover', alignSelf: 'flex-start' }} />
-                  )}
-                </Box>
+            {/* Render all blocks dynamically */}
+            {blocks.map((block) => renderBlock(block))}
+            
+            {blocks.length === 0 && (
+              <Typography color="text.secondary" sx={{ fontStyle: 'italic', textAlign: 'center', mt: 10 }}>
+                This project has no content blocks yet.
+              </Typography>
+            )}
 
-                {/* Section Columns (The "Widgets") */}
-                {section.columns && section.columns.length > 0 && (
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 4 }}>
-                    {section.columns.map((col, idx) => (
-                      <Box key={idx} sx={{ p: 2, border: col.type !== 'blank' ? '1px solid #eee' : 'none', borderRadius: 2, width: { xs: '100%', md: `calc(${col.width || 100}% - 12px)` }, boxSizing: 'border-box', bgcolor: col.type !== 'blank' ? '#fafafa' : 'transparent' }}>
-                        {renderColumnContent(col)}
-                      </Box>
-                    ))}
-                  </Box>
-                )}
-
-                {/* Subsections */}
-                {(section.subSections?.length ?? 0) > 0 && section.subSections?.map((sub: SubSection) => (
-                  <Box key={sub.id} sx={{ mt: 4, pt: 3, borderTop: '1px dashed #ccc' }}>
-                    {sub.heading && <Typography variant="h5" gutterBottom>{sub.heading}</Typography>}
-                    
-                    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3 }}>
-                      <Box sx={{ flex: 1 }}>
-                        {sub.content?.map((para, i) => (
-                          <Typography key={i} sx={{ mb: 2, lineHeight: 1.7 }}>{para}</Typography>
-                        ))}
-                        
-                        {sub.points && sub.points.length > 0 && (
-                          <List>
-                            {sub.points.map((point, idx) => (
-                              <ListItem key={idx} sx={{ py: 0.5 }}>
-                                <ListItemIcon sx={{ minWidth: 32 }}><CircleIcon sx={{ fontSize: 8 }} /></ListItemIcon>
-                                <ListItemText primary={point} />
-                              </ListItem>
-                            ))}
-                          </List>
-                        )}
-
-                        {sub.equation && (
-                          <Box sx={{ my: 3, p: 2, bgcolor: '#f8f9fa', borderRadius: 2, overflowX: 'auto' }}>
-                            <BlockMath math={sub.equation} />
-                          </Box>
-                        )}
-                      </Box>
-
-                      {sub.image && (
-                        <Box component="img" src={sub.image} alt="" sx={{ flex: 1, maxWidth: 350, width: '100%', borderRadius: 2, objectFit: 'contain', alignSelf: 'flex-start' }} />
-                      )}
-                    </Box>
-
-                    {/* Subsection Columns */}
-                    {sub.columns && sub.columns.length > 0 && (
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mt: 3 }}>
-                        {sub.columns.map((col, idx) => (
-                          <Box key={idx} sx={{ p: 2, border: col.type !== 'blank' ? '1px solid #eee' : 'none', borderRadius: 2, width: { xs: '100%', md: `calc(${col.width || 100}% - 12px)` }, boxSizing: 'border-box' }}>
-                            {renderColumnContent(col)}
-                          </Box>
-                        ))}
-                      </Box>
-                    )}
-                  </Box>
-                ))}
-              </Paper>
-            </Grid>
-          ))}
-        </Grid>
+          </Paper>
+        </Container>
       </Box>
 
-      {/* Mobile Drawer Toggle Fab */}
-      <Zoom in>
+      {/* Floating Drawer Toggle Button (Mobile) */}
+      <Zoom in={isSmallScreen}>
         <Fab color="primary" onClick={() => setOpen(!open)} sx={{ position: 'fixed', left: 24, bottom: 32, zIndex: 1200 }}>
           {open ? <ChevronLeftIcon /> : <MenuIcon />}
         </Fab>
       </Zoom>
+
     </Box>
   );
 }

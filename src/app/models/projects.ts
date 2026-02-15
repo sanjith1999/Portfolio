@@ -1,33 +1,35 @@
 // models/Project.ts
 import mongoose, { Document, Model } from 'mongoose';
 
-// Add the new types to the Column interface
-export interface Column {
+// ==========================================
+// TYPESCRIPT INTERFACES
+// ==========================================
+
+export type BlockType = 
+  | 'paragraph' 
+  | 'heading1' 
+  | 'heading2' 
+  | 'bullet_list' 
+  | 'numbered_list' 
+  | 'image' 
+  | 'equation' 
+  | 'columns';
+
+export interface Block {
   id: string;
-  width?: number;
-  type: 'text' | 'image' | 'points' | 'equation' | 'blank' | 'paragraphs'; 
-  content: string | string[]; // Can be empty string for 'blank'
-}
-// SubSection interface
-export interface SubSection {
-  id: string;
-  heading?: string;
-  content?: string[];
-  points?: string[];
-  equation?: string;
-  image?: string; // data URL
-  columns?: Column[];
+  type: BlockType;
+  content?: string | string[]; // Text, array of list items, or image URL. Optional because 'columns' type might not have content.
+  props?: {
+    align?: 'left' | 'center' | 'right';
+    caption?: string;
+  };
+  columns?: ColumnData[]; // Used only if type === 'columns'
 }
 
-// Add showInToc to Section
-export interface Section {
+export interface ColumnData {
   id: string;
-  heading: string;
-  showInToc?: boolean; // <-- NEW
-  content: string[];
-  image?: string; 
-  subSections?: SubSection[];
-  columns?: Column[];
+  width: number; // Percentage (e.g., 50)
+  blocks: Block[]; // Nested blocks inside this column
 }
 
 // Project document interface
@@ -40,59 +42,59 @@ export interface ProjectDoc extends Document {
   features: string[];
   challenges: string[];
   solutions: string[];
-  image?: string; // data URL
+  image?: string; // Main project cover image URL
   githubLink?: string;
   liveLink?: string;
   duration?: string;
   teamSize?: string;
   role?: string;
-  sections: Section[];
+  blocks: Block[]; // Replaces old 'sections'
   createdAt: Date;
   updatedAt: Date;
 }
 
-// Column schema
-const ColumnSchema = new mongoose.Schema(
+
+// ==========================================
+// MONGOOSE SCHEMAS
+// ==========================================
+
+// 1. Define BlockSchema without columns first to avoid circular dependency errors
+const BlockSchema = new mongoose.Schema(
   {
     id: { type: String, required: true },
-    width: { type: Number, required: false },
-    type: { type: String, enum: ['text', 'image', 'points', 'equation'], required: true },
-    content: { type: mongoose.Schema.Types.Mixed, required: true }, // string or array
+    type: { 
+      type: String, 
+      enum: ['paragraph', 'heading1', 'heading2', 'bullet_list', 'numbered_list', 'image', 'equation', 'columns'], 
+      required: true 
+    },
+    content: { type: mongoose.Schema.Types.Mixed }, // String or String Array
+    props: {
+      align: { type: String, enum: ['left', 'center', 'right'] },
+      caption: { type: String }
+    }
+  },
+  { _id: false } // Prevent mongoose from creating automatic ObjectIds for every block
+);
+
+// 2. Define ColumnDataSchema which relies on BlockSchema
+const ColumnDataSchema = new mongoose.Schema(
+  {
+    id: { type: String, required: true },
+    width: { type: Number, required: true },
+    blocks: [BlockSchema] // Recursive!
   },
   { _id: false }
 );
 
-// SubSection schema
-const SubSectionSchema = new mongoose.Schema(
-  {
-    id: { type: String, required: true },
-    heading: String,
-    content: [String],
-    points: [String],
-    equation: String,
-    image: String,
-    columns: [ColumnSchema], // new dynamic columns
-  },
-  { _id: false }
-);
+// 3. Resolve the circular dependency (Blocks can have Columns, Columns can have Blocks)
+BlockSchema.add({
+  columns: [ColumnDataSchema]
+});
 
-// Section schema
-const SectionSchema = new mongoose.Schema(
-  {
-    id: { type: String, required: true },
-    heading: { type: String, required: true },
-    content: [String],
-    image: String,
-    subSections: [SubSectionSchema],
-    columns: [ColumnSchema],
-  },
-  { _id: false }
-);
-
-// Project schema
+// 4. Main Project Schema
 const ProjectSchema = new mongoose.Schema(
   {
-    visibility: Boolean,
+    visibility: { type: Boolean, default: false },
     title: { type: String, required: true },
     description: String,
     longDescription: String,
@@ -106,12 +108,16 @@ const ProjectSchema = new mongoose.Schema(
     duration: String,
     teamSize: String,
     role: String,
-    sections: [SectionSchema],
+    blocks: [BlockSchema], // Replaces sections
   },
   { timestamps: true }
 );
 
-// Create or reuse model
+// ==========================================
+// EXPORTS
+// ==========================================
+
+// Create or reuse model (to prevent hot-reload compilation errors in Next.js)
 let ProjectModel: Model<ProjectDoc>;
 try {
   ProjectModel = mongoose.model<ProjectDoc>('Project');
