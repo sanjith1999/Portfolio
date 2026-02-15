@@ -3,166 +3,158 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { Box, IconButton, Menu, MenuItem, Tooltip } from '@mui/material';
+import { Box, IconButton, Menu, MenuItem, Tooltip, Divider } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { arrayMove, SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
-// import { ColumnData, BlockType } from '@/types/editor';
-// Import BlockEditor here for recursive rendering!
+import { ColumnData, BlockType, Block } from '@/app/data/projectsData'; // Update path if needed
 import BlockEditor from './BlockEditor'; 
-import { BlockType, ColumnData } from '@/app/data/projectsData';
 
-interface ResizableColumnsProps {
-  columns: ColumnData[];
-  onChange: (columns: ColumnData[]) => void;
+// Wrapper for blocks INSIDE columns
+function SortableColumnBlock({ block, onChange, onRemove }: { block: Block, onChange: (b: Block) => void, onRemove: () => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: block.id });
+  return (
+    <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }}>
+      <BlockEditor block={block} onChange={onChange} onRemove={onRemove} dragHandleProps={{ ...attributes, ...listeners }} />
+    </div>
+  );
 }
 
-export default function ResizableColumns({ columns, onChange }: ResizableColumnsProps) {
+export default function ResizableColumns({ columns, onChange }: { columns: ColumnData[], onChange: (cols: ColumnData[]) => void }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
+  const [dragState, setDragState] = useState<{ isDragging: boolean, index: number }>({ isDragging: false, index: -1 });
   const [menuConfig, setMenuConfig] = useState<{ anchorEl: HTMLElement | null, colIndex: number }>({ anchorEl: null, colIndex: 0 });
 
-  // Standardizing around 2 columns
-  const col1 = columns[0];
-  const col2 = columns[1];
+  const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor));
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
+  // --- Dynamic Resizing Logic for N columns ---
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isDragging || !containerRef.current || !col1 || !col2) return;
-
+      if (!dragState.isDragging || !containerRef.current) return;
+      const { index } = dragState; // index of the resizer being dragged
       const containerRect = containerRef.current.getBoundingClientRect();
-      const offsetX = e.clientX - containerRect.left;
       
-      // Calculate percentage, constraining between 15% and 85% width
-      let newCol1Width = (offsetX / containerRect.width) * 100;
-      newCol1Width = Math.max(15, Math.min(newCol1Width, 85));
-      const newCol2Width = 100 - newCol1Width;
+      const leftCol = columns[index];
+      const rightCol = columns[index + 1];
+      const combinedWidth = leftCol.width + rightCol.width;
 
-      onChange([
-        { ...col1, width: newCol1Width },
-        { ...col2, width: newCol2Width },
-      ]);
+      // Calculate relative position of mouse inside the combined space of the two columns
+      let totalWidthPx = containerRect.width;
+      let mouseXPercentage = ((e.clientX - containerRect.left) / totalWidthPx) * 100;
+      
+      // Calculate how much width comes BEFORE the current pair of columns
+      let widthBefore = columns.slice(0, index).reduce((acc, col) => acc + col.width, 0);
+      let newLeftWidth = mouseXPercentage - widthBefore;
+      
+      // Constrain widths so they don't crush each other (min 10%)
+      newLeftWidth = Math.max(10, Math.min(newLeftWidth, combinedWidth - 10));
+      let newRightWidth = combinedWidth - newLeftWidth;
+
+      const newCols = [...columns];
+      newCols[index] = { ...leftCol, width: newLeftWidth };
+      newCols[index + 1] = { ...rightCol, width: newRightWidth };
+      onChange(newCols);
     };
 
-    const handleMouseUp = () => setIsDragging(false);
-
-    if (isDragging) {
+    const handleMouseUp = () => setDragState({ isDragging: false, index: -1 });
+    if (dragState.isDragging) {
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
-      // Disable text selection while dragging to prevent highlighting chaos
       document.body.style.userSelect = 'none'; 
     } else {
       document.body.style.userSelect = '';
     }
+    return () => { window.removeEventListener('mousemove', handleMouseMove); window.removeEventListener('mouseup', handleMouseUp); };
+  }, [dragState, columns, onChange]);
 
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isDragging, col1, col2, onChange]);
+  // --- Drag and Drop Logic INSIDE the column ---
+  const handleDragEnd = (event: any, colIndex: number) => {
+    const { active, over } = event;
+    if (active.id !== over?.id) {
+      const col = columns[colIndex];
+      const oldIndex = col.blocks.findIndex(i => i.id === active.id);
+      const newIndex = col.blocks.findIndex(i => i.id === over.id);
+      
+      const newCols = [...columns];
+      newCols[colIndex] = { ...col, blocks: arrayMove(col.blocks, oldIndex, newIndex) };
+      onChange(newCols);
+    }
+  };
 
-  // Nested Block Modifiers
   const handleAddBlock = (type: BlockType) => {
-    const updatedColumns = [...columns];
-    updatedColumns[menuConfig.colIndex].blocks.push({ id: uuidv4(), type, content: '' });
-    onChange(updatedColumns);
-    setMenuConfig({ anchorEl: null, colIndex: 0 }); // Close menu
+    const newCols = [...columns];
+    newCols[menuConfig.colIndex].blocks.push({ id: uuidv4(), type, content: '' });
+    onChange(newCols);
+    setMenuConfig({ anchorEl: null, colIndex: 0 });
   };
-
-  const updateNestedBlock = (colIndex: number, blockIndex: number, updatedBlock: any) => {
-    const updatedColumns = [...columns];
-    updatedColumns[colIndex].blocks[blockIndex] = updatedBlock;
-    onChange(updatedColumns);
-  };
-
-  const removeNestedBlock = (colIndex: number, blockIndex: number) => {
-    const updatedColumns = [...columns];
-    updatedColumns[colIndex].blocks.splice(blockIndex, 1);
-    onChange(updatedColumns);
-  };
-
-  if (columns.length !== 2) return null;
 
   return (
-    <Box ref={containerRef} sx={{ display: 'flex', width: '100%', position: 'relative', alignItems: 'stretch' }}>
-      
-      {/* COLUMN 1 */}
-      <Box sx={{ width: `${col1.width}%`, pr: 2, boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
-        {col1.blocks.map((b, idx) => (
-          <BlockEditor 
-            key={b.id} 
-            block={b} 
-            onChange={(updated) => updateNestedBlock(0, idx, updated)} 
-            onRemove={() => removeNestedBlock(0, idx)} 
-          />
-        ))}
-        <Box sx={{ mt: 'auto', textAlign: 'center' }}>
-          <Tooltip title="Add block to left column">
-            <IconButton onClick={(e) => setMenuConfig({ anchorEl: e.currentTarget, colIndex: 0 })} size="small" sx={{ bgcolor: '#f5f5f5' }}>
-              <AddIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </Box>
-      </Box>
+    <Box ref={containerRef} sx={{ display: 'flex', width: '100%', alignItems: 'stretch' }}>
+      {columns.map((col, colIdx) => (
+        <React.Fragment key={col.id}>
+          {/* COLUMN BODY */}
+          <Box sx={{ width: `${col.width}%`, px: 1, display: 'flex', flexDirection: 'column' }}>
+            
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, colIdx)}>
+              <SortableContext items={col.blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
+                {col.blocks.map((b, bIdx) => (
+                  <SortableColumnBlock 
+                    key={b.id} 
+                    block={b} 
+                    onChange={(updated: Block) => {
+                      const newCols = [...columns];
+                      newCols[colIdx].blocks[bIdx] = updated;
+                      onChange(newCols);
+                    }} 
+                    onRemove={() => {
+                      const newCols = [...columns];
+                      newCols[colIdx].blocks.splice(bIdx, 1);
+                      onChange(newCols);
+                    }} 
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
 
-      {/* DRAGGABLE DIVIDER */}
-      <Box
-        onMouseDown={handleMouseDown}
-        sx={{
-          width: '12px',
-          cursor: 'col-resize',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          '&::after': {
-            content: '""',
-            height: '100%',
-            width: '2px',
-            backgroundColor: isDragging ? '#1976d2' : '#e0e0e0',
-            transition: 'background-color 0.2s',
-          },
-          '&:hover::after': { backgroundColor: '#1976d2' },
-          zIndex: 10,
-        }}
-      />
+            <Box sx={{ mt: 'auto', textAlign: 'center', pt: 1 }}>
+              <Tooltip title="Add block">
+                <IconButton onClick={(e) => setMenuConfig({ anchorEl: e.currentTarget, colIndex: colIdx })} size="small">
+                  <AddIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Box>
+          </Box>
 
-      {/* COLUMN 2 */}
-      <Box sx={{ width: `${col2.width}%`, pl: 2, boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
-        {col2.blocks.map((b, idx) => (
-          <BlockEditor 
-            key={b.id} 
-            block={b} 
-            onChange={(updated) => updateNestedBlock(1, idx, updated)} 
-            onRemove={() => removeNestedBlock(1, idx)} 
-          />
-        ))}
-        <Box sx={{ mt: 'auto', textAlign: 'center' }}>
-           <Tooltip title="Add block to right column">
-             <IconButton onClick={(e) => setMenuConfig({ anchorEl: e.currentTarget, colIndex: 1 })} size="small" sx={{ bgcolor: '#f5f5f5' }}>
-               <AddIcon fontSize="small" />
-             </IconButton>
-           </Tooltip>
-        </Box>
-      </Box>
+          {/* RESIZER (Don't render after the last column) */}
+          {colIdx < columns.length - 1 && (
+            <Box
+              onMouseDown={(e) => { e.preventDefault(); setDragState({ isDragging: true, index: colIdx }); }}
+              sx={{
+                width: '8px', cursor: 'col-resize', display: 'flex', justifyContent: 'center', zIndex: 10,
+                '&::after': { content: '""', height: '100%', width: '2px', backgroundColor: dragState.isDragging && dragState.index === colIdx ? '#1976d2' : '#e0e0e0' },
+                '&:hover::after': { backgroundColor: '#1976d2' }
+              }}
+            />
+          )}
+        </React.Fragment>
+      ))}
 
-      {/* ADD BLOCK MENU (Shared for both columns) */}
-      <Menu 
-        anchorEl={menuConfig.anchorEl} 
-        open={Boolean(menuConfig.anchorEl)} 
-        onClose={() => setMenuConfig({ anchorEl: null, colIndex: 0 })}
-      >
-        <MenuItem onClick={() => handleAddBlock('paragraph')}>Text</MenuItem>
+      {/* Shared Add Menu inside Columns */}
+      <Menu anchorEl={menuConfig.anchorEl} open={Boolean(menuConfig.anchorEl)} onClose={() => setMenuConfig({ anchorEl: null, colIndex: 0 })}>
+        <MenuItem onClick={() => handleAddBlock('paragraph')}>Text Paragraph</MenuItem>
         <MenuItem onClick={() => handleAddBlock('heading2')}>Heading 2</MenuItem>
         <MenuItem onClick={() => handleAddBlock('bullet_list')}>Bullet List</MenuItem>
         <MenuItem onClick={() => handleAddBlock('numbered_list')}>Numbered List</MenuItem>
+        <Divider />
         <MenuItem onClick={() => handleAddBlock('image')}>Image</MenuItem>
         <MenuItem onClick={() => handleAddBlock('equation')}>Math Equation</MenuItem>
+        <MenuItem onClick={() => handleAddBlock('code')}>Code Block</MenuItem>
+        <Divider />
+        <MenuItem onClick={() => handleAddBlock('divider')}>Divider</MenuItem>
+        <MenuItem onClick={() => handleAddBlock('spacer')}>Spacer</MenuItem>
       </Menu>
-
     </Box>
   );
 }

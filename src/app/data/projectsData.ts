@@ -12,7 +12,10 @@ export type BlockType =
   | 'numbered_list' 
   | 'image' 
   | 'equation' 
-  | 'columns';
+  | 'columns'
+  | 'code'       // <-- NEW
+  | 'divider'    // <-- NEW
+  | 'spacer';
 
 export interface ColumnData {
   id: string;

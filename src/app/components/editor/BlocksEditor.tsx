@@ -3,14 +3,26 @@
 
 import React, { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { Box, Button, Menu, MenuItem, Typography } from '@mui/material';
+import { Box, Button, Menu, MenuItem, Typography, Divider as MuiDivider } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
-import { arrayMove, SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { 
+  DndContext, 
+  closestCenter, 
+  KeyboardSensor, 
+  PointerSensor, 
+  useSensor, 
+  useSensors, 
+  DragEndEvent 
+} from '@dnd-kit/core';
+import { 
+  arrayMove, 
+  SortableContext, 
+  verticalListSortingStrategy, 
+  useSortable 
+} from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-// import { Block, BlockType } from '@/types/editor';
-import BlockEditor from './BlockEditor'; // The UI for an individual block (from the previous prompt)
+import BlockEditor from './BlockEditor'; 
 import { Block, BlockType } from '@/app/data/projectsData';
 
 // Wrapper to make individual blocks draggable
@@ -39,24 +51,28 @@ export default function BlocksEditor({ blocks, onChange }: BlocksEditorProps) {
     useSensor(KeyboardSensor)
   );
 
-  const handleDragEnd = (event: any) => {
+  // Replaced 'any' with 'DragEndEvent' for strict TypeScript safety
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    if (active.id !== over?.id) {
+    if (over && active.id !== over.id) {
       const oldIndex = blocks.findIndex(i => i.id === active.id);
       const newIndex = blocks.findIndex(i => i.id === over.id);
       onChange(arrayMove(blocks, oldIndex, newIndex));
     }
   };
 
-  const addBlock = (type: BlockType) => {
+  // Upgraded to handle dynamic column counts!
+  const addBlock = (type: BlockType, columnCount: number = 2) => {
     const newBlock: Block = { id: uuidv4(), type, content: '' };
     
-    // If the user adds a column layout, give them two 50% columns by default
     if (type === 'columns') {
-      newBlock.columns = [
-        { id: uuidv4(), width: 50, blocks: [] },
-        { id: uuidv4(), width: 50, blocks: [] },
-      ];
+      // Dynamically create 2, 3, or 4 columns with perfectly divided widths
+      const colWidth = 100 / columnCount;
+      newBlock.columns = Array.from({ length: columnCount }).map(() => ({
+        id: uuidv4(), 
+        width: colWidth, 
+        blocks: [] 
+      }));
     }
     
     onChange([...blocks, newBlock]);
@@ -71,7 +87,7 @@ export default function BlocksEditor({ blocks, onChange }: BlocksEditorProps) {
             <SortableBlockWrapper
               key={block.id}
               block={block}
-              onChange={(updatedBlock) => {
+              onChange={(updatedBlock: Block) => {
                 const newBlocks = [...blocks];
                 newBlocks[index] = updatedBlock;
                 onChange(newBlocks);
@@ -96,13 +112,30 @@ export default function BlocksEditor({ blocks, onChange }: BlocksEditorProps) {
           Add Block
         </Button>
         <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
+          
+          {/* Text & Lists */}
           <MenuItem onClick={() => addBlock('paragraph')}>Text Paragraph</MenuItem>
           <MenuItem onClick={() => addBlock('heading1')}>Heading 1</MenuItem>
           <MenuItem onClick={() => addBlock('heading2')}>Heading 2</MenuItem>
           <MenuItem onClick={() => addBlock('bullet_list')}>Bullet List</MenuItem>
+          <MenuItem onClick={() => addBlock('numbered_list')}>Numbered List</MenuItem>
+          
+          <MuiDivider />
+          
+          {/* Media & Code */}
           <MenuItem onClick={() => addBlock('image')}>Image</MenuItem>
           <MenuItem onClick={() => addBlock('equation')}>Math Equation</MenuItem>
-          <MenuItem onClick={() => addBlock('columns')}>2-Column Layout</MenuItem>
+          <MenuItem onClick={() => addBlock('code')}>Code Block</MenuItem>
+          
+          <MuiDivider />
+
+          {/* Layout & Structure */}
+          <MenuItem onClick={() => addBlock('divider')}>Horizontal Divider</MenuItem>
+          <MenuItem onClick={() => addBlock('spacer')}>Empty Spacer</MenuItem>
+          <MenuItem onClick={() => addBlock('columns', 2)}>2-Column Layout</MenuItem>
+          <MenuItem onClick={() => addBlock('columns', 3)}>3-Column Layout</MenuItem>
+          <MenuItem onClick={() => addBlock('columns', 4)}>4-Column Layout</MenuItem>
+        
         </Menu>
       </Box>
     </Box>

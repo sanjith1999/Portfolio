@@ -12,10 +12,19 @@ import CircleIcon from '@mui/icons-material/Circle';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import { BlockMath } from 'react-katex';
 
-// Update your imports to match your new types locations
+import 'react-quill-new/dist/quill.snow.css'; 
+
 import { Project, Block } from '@/app/data/projectsData'; 
 import { useProjectStore } from '@/store/public-project-store';
 import LoadingBackdrop from './LoadingBackdrop';
+
+// Fallback helper function to strip HTML tags for the TOC
+// (In case a heading accidentally saved as HTML from the previous version)
+const stripHtml = (html?: string | string[]) => {
+  if (!html) return '';
+  const str = Array.isArray(html) ? html.join(' ') : html;
+  return str.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim();
+};
 
 export default function ProjectPreview() {
   const drawerWidth = 260;
@@ -29,7 +38,6 @@ export default function ProjectPreview() {
   const [open, setOpen] = useState(false);
   const [loadingProject, setProjectLoading] = useState(false);
 
-  // Smooth scroll to headings
   const handleScroll = (blockId: string) => {
     const element = document.getElementById(blockId);
     if (element) {
@@ -60,51 +68,49 @@ export default function ProjectPreview() {
   if (loadingProject) return <LoadingBackdrop open={loadingProject} />;
 
   const blocks = project.blocks || [];
+  const tocHeadings = blocks.filter(b => b.type === 'heading1' || b.type === 'heading2');
 
-  // Generate Table of Contents from Heading blocks
-  const tocHeadings = blocks.filter(
-    (b) => b.type === 'heading1' || b.type === 'heading2'
-  );
-
-  // =========================================================
-  // RECURSIVE BLOCK RENDERER
-  // =========================================================
   const renderBlock = (block: Block) => {
     const content = block.content || '';
     
     switch (block.type) {
+      // PLAIN TEXT HEADINGS (No inner HTML)
       case 'heading1':
         return (
           <Typography 
-            key={block.id} 
-            id={block.id} 
-            variant="h4" 
-            sx={{ mt: 5, mb: 2, fontWeight: 'bold', scrollMarginTop: '80px', color: 'primary.main' }}
+            key={block.id} id={block.id} variant="h4" 
+            sx={{ p: 0, mt: 5, mb: 2, fontWeight: 'bold', scrollMarginTop: '80px', color: 'primary.main' }} 
           >
-            {content}
+            {stripHtml(content as string)}
           </Typography>
         );
-
+      
       case 'heading2':
         return (
           <Typography 
-            key={block.id} 
-            id={block.id} 
-            variant="h5" 
-            sx={{ mt: 4, mb: 2, fontWeight: '600', scrollMarginTop: '80px' }}
+            key={block.id} id={block.id} variant="h5" 
+            sx={{ p: 0, mt: 4, mb: 2, fontWeight: '600', scrollMarginTop: '80px' }} 
           >
-            {content}
+            {stripHtml(content as string)}
           </Typography>
         );
 
+      // RICH TEXT PARAGRAPH
       case 'paragraph':
-        const paras = Array.isArray(content) ? content : [content];
-        return paras.map((p, i) => (
-          <Typography key={`${block.id}-${i}`} sx={{ mb: 2, lineHeight: 1.8, color: 'text.primary', fontSize: '1.1rem' }}>
-            {p}
-          </Typography>
-        ));
+        return (
+          <Box 
+            key={block.id} 
+            className="ql-editor" // Applies Quill formats
+            sx={{ 
+              p: 0, mb: 2, lineHeight: 1.8, fontSize: '1.1rem', textAlign: 'justify', 
+              '& p': { textAlign: 'justify', m: 0 }, 
+              '& a': { color: '#1976d2' } 
+            }} 
+            dangerouslySetInnerHTML={{ __html: content as string }} 
+          />
+        );
 
+      // LISTS (Standard, no rich text)
       case 'bullet_list':
       case 'numbered_list':
         const listItems = Array.isArray(content) ? content : [content];
@@ -129,16 +135,9 @@ export default function ProjectPreview() {
       case 'image':
         return (
           <Box key={block.id} sx={{ my: 4, textAlign: block.props?.align || 'center' }}>
-            <Box 
-              component="img" 
-              src={content as string} 
-              alt={block.props?.caption || "Project Image"} 
-              sx={{ maxWidth: '100%', borderRadius: 2, boxShadow: 1 }} 
-            />
+            <Box component="img" src={content as string} alt={block.props?.caption || "Project Image"} sx={{ maxWidth: '100%', borderRadius: 2, boxShadow: 1 }} />
             {block.props?.caption && (
-              <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 1 }}>
-                {block.props.caption}
-              </Typography>
+              <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 1 }}>{block.props.caption}</Typography>
             )}
           </Box>
         );
@@ -147,9 +146,7 @@ export default function ProjectPreview() {
         const equations = Array.isArray(content) ? content : [content];
         return (
           <Box key={block.id} sx={{ my: 3, p: 2, bgcolor: '#f8f9fa', borderRadius: 2, overflowX: 'auto', textAlign: 'center' }}>
-            {equations.map((line, i) => (
-              <BlockMath key={i} math={line as string} />
-            ))}
+            {equations.map((line, i) => <BlockMath key={i} math={line as string} />)}
           </Box>
         );
 
@@ -158,19 +155,25 @@ export default function ProjectPreview() {
         return (
           <Box key={block.id} sx={{ display: 'flex', flexWrap: { xs: 'wrap', md: 'nowrap' }, gap: 3, my: 4 }}>
             {block.columns.map((col) => (
-              <Box 
-                key={col.id} 
-                sx={{ 
-                  width: { xs: '100%', md: `${col.width}%` }, 
-                  boxSizing: 'border-box' 
-                }}
-              >
-                {/* Recursively render blocks inside this column! */}
+              <Box key={col.id} sx={{ width: { xs: '100%', md: `${col.width}%` }, boxSizing: 'border-box' }}>
                 {col.blocks.map(nestedBlock => renderBlock(nestedBlock))}
               </Box>
             ))}
           </Box>
         );
+      
+      case 'code':
+        return (
+          <Box key={block.id} sx={{ my: 3, p: 2, bgcolor: '#1e1e1e', color: '#d4d4d4', borderRadius: 2, overflowX: 'auto', fontFamily: 'monospace', fontSize: '0.9rem' }}>
+            <pre style={{ margin: 0 }}>{content}</pre>
+          </Box>
+        );
+
+      case 'divider':
+        return <Box key={block.id} sx={{ my: 4, borderBottom: '2px solid #eee' }} />;
+
+      case 'spacer':
+        return <Box key={block.id} sx={{ height: '40px' }} />;
 
       default:
         return null;
@@ -189,11 +192,11 @@ export default function ProjectPreview() {
               {tocHeadings.map((heading) => (
                 <ListItemButton key={heading.id} onClick={() => handleScroll(heading.id)} sx={{ borderRadius: 1, mb: 0.5 }}>
                   <ListItemText 
-                    primary={heading.content} 
+                    primary={stripHtml(heading.content)} 
                     primaryTypographyProps={{ 
                       fontSize: heading.type === 'heading2' ? '0.9rem' : '1rem',
                       fontWeight: heading.type === 'heading1' ? '600' : '400',
-                      ml: heading.type === 'heading2' ? 2 : 0, // Indent H2s slightly
+                      ml: heading.type === 'heading2' ? 2 : 0, 
                       color: 'text.secondary'
                     }} 
                   />
@@ -215,7 +218,7 @@ export default function ProjectPreview() {
                 {tocHeadings.map((heading) => (
                   <ListItemButton key={heading.id} onClick={() => handleScroll(heading.id)} sx={{ borderRadius: 1, py: 0.5 }}>
                     <ListItemText 
-                      primary={heading.content} 
+                      primary={stripHtml(heading.content)} 
                       primaryTypographyProps={{ 
                         fontSize: heading.type === 'heading2' ? '0.85rem' : '0.95rem',
                         fontWeight: heading.type === 'heading1' ? '600' : '400',
@@ -233,8 +236,6 @@ export default function ProjectPreview() {
 
       {/* Main Content Area */}
       <Box sx={{ flexGrow: 1, height: '100%', overflowY: 'auto', p: { xs: 2, md: 6 }, scrollBehavior: 'smooth' }}>
-        
-        {/* Top Header Row */}
         {!open && !isSmallScreen && (
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 5, position: 'sticky', top: 0, bgcolor: '#fcfcfc', zIndex: 10, py: 2 }}>
             <IconButton onClick={() => setOpen(true)} sx={{ bgcolor: 'white', boxShadow: 1, '&:hover': { bgcolor: '#f0f0f0' } }}>
@@ -243,21 +244,16 @@ export default function ProjectPreview() {
           </Box>
         )}
 
-        {/* The Notion-Style Document Paper */}
         <Container maxWidth="md" sx={{ mt: isSmallScreen ? 2 : 0 }}>
           <Paper elevation={0} sx={{ p: { xs: 3, md: 8 }, borderRadius: 4, bgcolor: 'white', minHeight: '80vh', border: '1px solid #f0f0f0' }}>
-            
-            {/* Document Title (H1 equivalent) */}
             <Typography variant="h3" fontWeight="bold" gutterBottom sx={{ mb: 4 }}>
               {project.title}
             </Typography>
             
-            {/* If there's a main cover image */}
             {project.image && (
               <Box component="img" src={project.image} sx={{ width: '100%', maxHeight: '400px', objectFit: 'cover', borderRadius: 3, mb: 6 }} />
             )}
 
-            {/* Render all blocks dynamically */}
             {blocks.map((block) => renderBlock(block))}
             
             {blocks.length === 0 && (
@@ -265,18 +261,15 @@ export default function ProjectPreview() {
                 This project has no content blocks yet.
               </Typography>
             )}
-
           </Paper>
         </Container>
       </Box>
 
-      {/* Floating Drawer Toggle Button (Mobile) */}
       <Zoom in={isSmallScreen}>
         <Fab color="primary" onClick={() => setOpen(!open)} sx={{ position: 'fixed', left: 24, bottom: 32, zIndex: 1200 }}>
           {open ? <ChevronLeftIcon /> : <MenuIcon />}
         </Fab>
       </Zoom>
-
     </Box>
   );
 }

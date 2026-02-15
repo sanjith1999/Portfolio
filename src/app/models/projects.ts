@@ -13,7 +13,10 @@ export type BlockType =
   | 'numbered_list' 
   | 'image' 
   | 'equation' 
-  | 'columns';
+  | 'columns'
+  | 'code'       // <-- NEW
+  | 'divider'    // <-- NEW
+  | 'spacer';
 
 export interface Block {
   id: string;
@@ -62,9 +65,9 @@ export interface ProjectDoc extends Document {
 const BlockSchema = new mongoose.Schema(
   {
     id: { type: String, required: true },
-    type: { 
+type: { 
       type: String, 
-      enum: ['paragraph', 'heading1', 'heading2', 'bullet_list', 'numbered_list', 'image', 'equation', 'columns'], 
+      enum: ['paragraph', 'heading1', 'heading2', 'bullet_list', 'numbered_list', 'image', 'equation', 'columns', 'code', 'divider', 'spacer'], 
       required: true 
     },
     content: { type: mongoose.Schema.Types.Mixed }, // String or String Array

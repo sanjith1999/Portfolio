@@ -2,20 +2,21 @@
 'use client';
 
 import React from 'react';
-import { Box, TextField, IconButton, Button, Typography } from '@mui/material';
+import { Box, TextField, IconButton, Button, Typography, Divider } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import AddIcon from '@mui/icons-material/Add';
 import { BlockMath } from 'react-katex';
 
-// import { Block } from '@/types/editor';
+import { Block } from '@/app/data/projectsData'; // Ensure this path is correct
 import ResizableColumns from './ResizableColumns';
-import { Block } from '@/app/data/projectsData';
+import RichTextEditor from './RichTextEditor';
 
 interface BlockEditorProps {
   block: Block;
   onChange: (block: Block) => void;
   onRemove: () => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   dragHandleProps?: any; // Passed down from dnd-kit sortable
 }
 
@@ -40,33 +41,39 @@ export default function BlockEditor({ block, onChange, onRemove, dragHandleProps
 
   const renderContent = () => {
     switch (block.type) {
+      
+      // --- STRUCTURAL TEXT BLOCKS (No formatting) ---
       case 'heading1':
         return (
           <TextField
             fullWidth placeholder="Heading 1" variant="standard"
-            value={block.content || ''}
+            value={(block.content as string) || ''}
             onChange={(e) => onChange({ ...block, content: e.target.value })}
             InputProps={{ style: { fontSize: '2rem', fontWeight: 'bold' }, disableUnderline: true }}
           />
         );
+        
       case 'heading2':
         return (
           <TextField
             fullWidth placeholder="Heading 2" variant="standard"
-            value={block.content || ''}
+            value={(block.content as string) || ''}
             onChange={(e) => onChange({ ...block, content: e.target.value })}
             InputProps={{ style: { fontSize: '1.5rem', fontWeight: '600' }, disableUnderline: true }}
           />
         );
+
+      // --- RICH TEXT BLOCKS ---
       case 'paragraph':
         return (
-          <TextField
-            fullWidth multiline placeholder="Type something..." variant="standard"
-            value={block.content || ''}
-            onChange={(e) => onChange({ ...block, content: e.target.value })}
-            InputProps={{ disableUnderline: true, style: { fontSize: '1.1rem', lineHeight: 1.6 } }}
+          <RichTextEditor 
+            value={(block.content as string) || ''} 
+            onChange={(val) => onChange({ ...block, content: val })} 
+            placeholder="Type your paragraph..."
           />
         );
+
+      // --- LIST BLOCKS (No formatting) ---
       case 'bullet_list':
       case 'numbered_list':
         const items = Array.isArray(block.content) ? block.content : [''];
@@ -82,7 +89,9 @@ export default function BlockEditor({ block, onChange, onRemove, dragHandleProps
                   value={item} onChange={(e) => handleListChange(i, e.target.value)}
                   InputProps={{ disableUnderline: true }}
                 />
-                <IconButton size="small" onClick={() => handleListRemove(i)}><DeleteIcon fontSize="small" /></IconButton>
+                <IconButton size="small" onClick={() => handleListRemove(i)}>
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
               </Box>
             ))}
             <Button size="small" startIcon={<AddIcon />} onClick={handleListAdd} sx={{ mt: 1, color: 'text.secondary' }}>
@@ -90,6 +99,8 @@ export default function BlockEditor({ block, onChange, onRemove, dragHandleProps
             </Button>
           </Box>
         );
+
+      // --- MEDIA & MATH BLOCKS ---
       case 'equation':
         return (
           <Box sx={{ width: '100%' }}>
@@ -106,6 +117,7 @@ export default function BlockEditor({ block, onChange, onRemove, dragHandleProps
             )}
           </Box>
         );
+
       case 'image':
         return (
           <Box sx={{ width: '100%' }}>
@@ -142,16 +154,49 @@ export default function BlockEditor({ block, onChange, onRemove, dragHandleProps
             )}
           </Box>
         );
+
+      // --- LAYOUT BLOCKS ---
+      case 'code':
+        return (
+          <Box sx={{ width: '100%' }}>
+            <Typography variant="caption" color="text.secondary">Code Block</Typography>
+            <TextField
+              fullWidth multiline minRows={3}
+              value={block.content || ''}
+              onChange={(e) => onChange({ ...block, content: e.target.value })}
+              sx={{ 
+                fontFamily: 'monospace', 
+                bgcolor: '#1e1e1e', 
+                borderRadius: 1, 
+                '& .MuiInputBase-input': { color: '#d4d4d4', fontFamily: 'monospace' } 
+              }}
+            />
+          </Box>
+        );
+
+      case 'divider':
+        return <Divider sx={{ my: 2, borderWidth: 2, width: '100%' }} />;
+
+      case 'spacer':
+        return (
+          <Box sx={{ width: '100%', border: '1px dashed #ccc', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#fdfdfd' }}>
+            <Typography variant="caption" color="text.disabled">Empty Spacer (Invisible on Viewer)</Typography>
+          </Box>
+        );
+
       case 'columns':
         return (
-           <Box sx={{ border: '1px solid #eee', p: 2, borderRadius: 2, bgcolor: 'white', width: '100%' }}>
-             <Typography variant="overline" color="text.disabled" sx={{ display: 'block', mb: 2 }}>Column Layout</Typography>
+           <Box sx={{ border: '1px solid #eee', p: 1, borderRadius: 2, bgcolor: 'white', width: '100%' }}>
+             <Typography variant="overline" color="text.disabled" sx={{ display: 'block', mb: 1 }}>
+               {block.columns?.length}-Column Layout
+             </Typography>
              <ResizableColumns 
                columns={block.columns || []} 
                onChange={(cols) => onChange({ ...block, columns: cols })}
              />
            </Box>
         );
+
       default:
         return <Typography color="error">Unsupported block type</Typography>;
     }
@@ -175,16 +220,25 @@ export default function BlockEditor({ block, onChange, onRemove, dragHandleProps
         mr: 1, 
         mt: 1 
       }}>
-        <IconButton size="small" {...dragHandleProps} sx={{ cursor: 'grab', color: '#bdbdbd', '&:hover': { color: '#424242' } }}>
+        <IconButton 
+          size="small" 
+          {...dragHandleProps} 
+          sx={{ cursor: 'grab', color: '#bdbdbd', '&:hover': { color: '#424242' } }}
+        >
           <DragIndicatorIcon fontSize="small" />
         </IconButton>
-        <IconButton size="small" color="error" onClick={onRemove} sx={{ opacity: 0.7, '&:hover': { opacity: 1 } }}>
+        <IconButton 
+          size="small" 
+          color="error" 
+          onClick={onRemove} 
+          sx={{ opacity: 0.7, '&:hover': { opacity: 1 } }}
+        >
           <DeleteIcon fontSize="small" />
         </IconButton>
       </Box>
 
       {/* Main Content Area */}
-      <Box sx={{ flexGrow: 1, p: 1, width: 'calc(100% - 80px)' }}>
+      <Box sx={{ flexGrow: 1, p: 0.5, width: 'calc(100% - 80px)' }}>
         {renderContent()}
       </Box>
     </Box>
