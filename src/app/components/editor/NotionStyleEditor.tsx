@@ -4,22 +4,37 @@ import React, { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Box, Button, Paper, Menu, MenuItem, Typography } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
 import { Block, BlockType } from '@/app/data/projectsData';
-
 import BlockEditor from './BlockEditor';
 
-// Wrapper for dnd-kit sortable items
-function SortableBlockWrapper({ block, onChange, onRemove }: { block: Block, onChange: any, onRemove: any }) {
+// 🔥 FIX 1: Add onInsertBelow to the wrapper's types and props, and remove 'any'
+function SortableBlockWrapper({ 
+  block, 
+  onChange, 
+  onRemove,
+  onInsertBelow 
+}: { 
+  block: Block, 
+  onChange: (b: Block) => void, 
+  onRemove: () => void,
+  onInsertBelow: (type: BlockType, cols?: number) => void
+}) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: block.id });
   const style = { transform: CSS.Transform.toString(transform), transition };
 
   return (
     <div ref={setNodeRef} style={style}>
-      <BlockEditor block={block} onChange={onChange} onRemove={onRemove} dragHandleProps={{ ...attributes, ...listeners }} />
+      <BlockEditor 
+        block={block} 
+        onChange={onChange} 
+        onRemove={onRemove} 
+        onInsertBelow={onInsertBelow} // Passed down to BlockEditor!
+        dragHandleProps={{ ...attributes, ...listeners }} 
+      />
     </div>
   );
 }
@@ -37,9 +52,9 @@ export default function NotionStyleEditor() {
     useSensor(KeyboardSensor)
   );
 
-  const handleDragEnd = (event: any) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    if (active.id !== over.id) {
+    if (over && active.id !== over.id) {
       setBlocks((items) => {
         const oldIndex = items.findIndex(i => i.id === active.id);
         const newIndex = items.findIndex(i => i.id === over.id);
@@ -52,18 +67,25 @@ export default function NotionStyleEditor() {
     setAnchorEl(event.currentTarget);
   };
 
-  const addBlock = (type: BlockType) => {
+  // 🔥 FIX 2: Create the insertBlock logic for inline additions
+  const insertBlock = (index: number, type: BlockType, columnCount: number = 2) => {
     const newBlock: Block = { id: uuidv4(), type, content: '' };
     
-    // If it's a column, initialize the data structure for it
     if (type === 'columns') {
-      newBlock.columns = [
-        { id: uuidv4(), width: 50, blocks: [] },
-        { id: uuidv4(), width: 50, blocks: [] },
-      ];
+      const colWidth = 100 / columnCount;
+      newBlock.columns = Array.from({ length: columnCount }).map(() => ({
+        id: uuidv4(), width: colWidth, blocks: []
+      }));
     }
     
-    setBlocks([...blocks, newBlock]);
+    const newBlocks = [...blocks];
+    newBlocks.splice(index + 1, 0, newBlock); // Insert exactly below the clicked block
+    setBlocks(newBlocks);
+  };
+
+  // Keep this for the generic "Add to bottom" button
+  const addBlockToBottom = (type: BlockType) => {
+    insertBlock(blocks.length - 1, type);
     setAnchorEl(null);
   };
 
@@ -83,6 +105,8 @@ export default function NotionStyleEditor() {
                 setBlocks(newBlocks);
               }}
               onRemove={() => setBlocks(blocks.filter((_, i) => i !== index))}
+              // 🔥 FIX 3: Pass the inline insert function here
+              onInsertBelow={(type, cols) => insertBlock(index, type, cols)}
             />
           ))}
         </SortableContext>
@@ -93,11 +117,11 @@ export default function NotionStyleEditor() {
           Add Block
         </Button>
         <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
-          <MenuItem onClick={() => addBlock('paragraph')}>Text</MenuItem>
-          <MenuItem onClick={() => addBlock('heading1')}>Heading 1</MenuItem>
-          <MenuItem onClick={() => addBlock('image')}>Image</MenuItem>
-          <MenuItem onClick={() => addBlock('equation')}>Math Equation</MenuItem>
-          <MenuItem onClick={() => addBlock('columns')}>2-Column Layout</MenuItem>
+          <MenuItem onClick={() => addBlockToBottom('paragraph')}>Text</MenuItem>
+          <MenuItem onClick={() => addBlockToBottom('heading1')}>Heading 1</MenuItem>
+          <MenuItem onClick={() => addBlockToBottom('image')}>Image</MenuItem>
+          <MenuItem onClick={() => addBlockToBottom('equation')}>Math Equation</MenuItem>
+          <MenuItem onClick={() => addBlockToBottom('columns')}>2-Column Layout</MenuItem>
         </Menu>
       </Box>
 
