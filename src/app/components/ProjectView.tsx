@@ -122,34 +122,35 @@ const router = useRouter();
           </Typography>
         );
 
-      case 'paragraph':
+     case 'paragraph':
         return (
           <Box 
             key={block.id} 
-            className="ql-editor" // Applies Quill sizes/colors
+            className="ql-editor" // Applies Quill sizes/colors/alignments
             sx={{ 
-              padding: '0 !important', // Kills Quill's default 15px container padding
+              padding: '0 !important', 
               margin: '0 !important',
-              marginBottom: isNested ? '6px !important' : '16px !important', // Tiny 6px gap if inside a column
+              marginBottom: isNested ? '6px !important' : '16px !important', 
               lineHeight: 1.7, 
               fontSize: '1.1rem', 
               color: 'text.primary',
               
-              // 🔥 NUCLEAR OPTION: Strips all browser margins from internal HTML tags
+              // 🔥 Set default to justify, but allow Quill's alignment classes to override it!
+              textAlign: 'justify',
+              
+              // Nuclear option to strip margins, but WITHOUT forcing text-align so center/right works
               '& p, & h1, & h2, & h3, & h4, & h5, & h6': { 
-                textAlign: 'justify !important', 
                 margin: '0 !important', 
                 padding: '0 !important' 
               }, 
               '& p + p': {
-                marginTop: '6px !important' // If one block has multiple paragraphs, give them a tiny gap
+                marginTop: '6px !important' 
               },
               '& a': { color: 'primary.main' } 
             }} 
             dangerouslySetInnerHTML={{ __html: content as string }} 
           />
         );
-
       case 'bullet_list':
       case 'numbered_list':
         const listItems = Array.isArray(content) ? content : [content];

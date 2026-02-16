@@ -3,11 +3,11 @@
 
 import React from 'react';
 import dynamic from 'next/dynamic';
-import 'react-quill-new/dist/quill.snow.css'; // <-- Updated import
+import 'react-quill-new/dist/quill.snow.css'; 
 import { Box } from '@mui/material';
 
 // Dynamically import the React 19 compatible version
-const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false }) as any; // <-- Updated import
+const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false }) as any; 
 
 interface RichTextEditorProps {
   value: string;
@@ -18,11 +18,12 @@ interface RichTextEditorProps {
 export default function RichTextEditor({ value, onChange, placeholder }: RichTextEditorProps) {
   const modules = {
     toolbar: [
-      [{ 'size': ['small', false, 'large', 'huge'] }], // Text size
-      ['bold', 'italic', 'underline', 'strike'],       // Toggles
-      [{ 'color': [] }, { 'background': [] }],         // Colors
-      ['link'],                                        // Links
-      ['clean']                                        // Remove formatting
+      [{ 'size': ['small', false, 'large', 'huge'] }], 
+      ['bold', 'italic', 'underline', 'strike'],       
+      [{ 'color': [] }, { 'background': [] }],         
+      [{ 'align': [] }], // 🔥 NEW: Alignment options (Left, Center, Right, Justify)
+      ['link'],                                        
+      ['clean']                                        
     ],
   };
 
@@ -30,10 +31,10 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
     <Box sx={{ 
       '.ql-container': { fontSize: '1rem', fontFamily: 'inherit', border: 'none' },
       '.ql-toolbar': { border: 'none', borderBottom: '1px solid #eee', padding: '4px 8px' },
-      '.ql-editor': { padding: '12px 0', minHeight: '80px' }, // Added a slight minHeight for better UX
+      '.ql-editor': { padding: '12px 0', minHeight: '80px' }, 
       border: '1px solid #eee', 
       borderRadius: 1,
-      bgcolor: 'white'
+      bgcolor: 'background.paper'
     }}>
       <ReactQuill 
         theme="snow" 
