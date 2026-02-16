@@ -80,7 +80,7 @@ export default function HomePage() {
     setMobileMenuOpen(false);
   };
 
-  const handleViewDetails = (projectId: Types.ObjectId | undefined) => {
+  const handleViewDetails = (projectId: string | Types.ObjectId | undefined) => {
     setLoading(true);
     window.scrollTo(0, 0);
 
