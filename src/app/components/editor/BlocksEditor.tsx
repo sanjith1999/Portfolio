@@ -1,38 +1,41 @@
 // components/editor/BlocksEditor.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { Box, Button, Menu, MenuItem, Typography, Divider as MuiDivider } from '@mui/material';
+import { Box, Button, Typography } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import { 
-  DndContext, 
-  closestCenter, 
-  KeyboardSensor, 
-  PointerSensor, 
-  useSensor, 
-  useSensors, 
-  DragEndEvent 
-} from '@dnd-kit/core';
-import { 
-  arrayMove, 
-  SortableContext, 
-  verticalListSortingStrategy, 
-  useSortable 
-} from '@dnd-kit/sortable';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
 import BlockEditor from './BlockEditor'; 
 import { Block, BlockType } from '@/app/data/projectsData';
 
 // Wrapper to make individual blocks draggable
-function SortableBlockWrapper({ block, onChange, onRemove }: { block: Block, onChange: (b: Block) => void, onRemove: () => void }) {
+function SortableBlockWrapper({ 
+  block, 
+  onChange, 
+  onRemove, 
+  onInsertBelow 
+}: { 
+  block: Block, 
+  onChange: (b: Block) => void, 
+  onRemove: () => void,
+  onInsertBelow: (type: BlockType, cols?: number) => void
+}) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: block.id });
   const style = { transform: CSS.Transform.toString(transform), transition };
 
   return (
     <div ref={setNodeRef} style={style}>
-      <BlockEditor block={block} onChange={onChange} onRemove={onRemove} dragHandleProps={{ ...attributes, ...listeners }} />
+      <BlockEditor 
+        block={block} 
+        onChange={onChange} 
+        onRemove={onRemove} 
+        onInsertBelow={onInsertBelow}
+        dragHandleProps={{ ...attributes, ...listeners }} 
+      />
     </div>
   );
 }
@@ -43,15 +46,8 @@ interface BlocksEditorProps {
 }
 
 export default function BlocksEditor({ blocks, onChange }: BlocksEditorProps) {
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor));
 
-  // Drag and Drop configuration
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor)
-  );
-
-  // Replaced 'any' with 'DragEndEvent' for strict TypeScript safety
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (over && active.id !== over.id) {
@@ -61,22 +57,20 @@ export default function BlocksEditor({ blocks, onChange }: BlocksEditorProps) {
     }
   };
 
-  // Upgraded to handle dynamic column counts!
-  const addBlock = (type: BlockType, columnCount: number = 2) => {
+  // 🔥 NEW: Insert block AT A SPECIFIC INDEX (Below the block that clicked '+')
+  const insertBlock = (index: number, type: BlockType, columnCount: number = 2) => {
     const newBlock: Block = { id: uuidv4(), type, content: '' };
     
     if (type === 'columns') {
-      // Dynamically create 2, 3, or 4 columns with perfectly divided widths
       const colWidth = 100 / columnCount;
       newBlock.columns = Array.from({ length: columnCount }).map(() => ({
-        id: uuidv4(), 
-        width: colWidth, 
-        blocks: [] 
+        id: uuidv4(), width: colWidth, blocks: [] 
       }));
     }
     
-    onChange([...blocks, newBlock]);
-    setAnchorEl(null);
+    const newBlocks = [...blocks];
+    newBlocks.splice(index + 1, 0, newBlock); // Insert AFTER the current index
+    onChange(newBlocks);
   };
 
   return (
@@ -92,52 +86,33 @@ export default function BlocksEditor({ blocks, onChange }: BlocksEditorProps) {
                 newBlocks[index] = updatedBlock;
                 onChange(newBlocks);
               }}
-              onRemove={() => {
-                const newBlocks = blocks.filter((_, i) => i !== index);
-                onChange(newBlocks);
-              }}
+              onRemove={() => onChange(blocks.filter((_, i) => i !== index))}
+              onInsertBelow={(type, cols) => insertBlock(index, type, cols)}
             />
           ))}
         </SortableContext>
       </DndContext>
 
+      {/* Fallback button just in case they delete all blocks and need to start over */}
       {blocks.length === 0 && (
-        <Typography color="text.secondary" sx={{ textAlign: 'center', my: 4, fontStyle: 'italic' }}>
-          No content yet. Click below to add your first block.
-        </Typography>
+        <Box sx={{ textAlign: 'center', py: 4 }}>
+          <Typography color="text.secondary" sx={{ mb: 2, fontStyle: 'italic' }}>
+            No content yet. Click below to add your first block.
+          </Typography>
+          <Button startIcon={<AddIcon />} variant="contained" onClick={() => insertBlock(-1, 'paragraph')}>
+            Start Writing
+          </Button>
+        </Box>
       )}
 
-      <Box sx={{ mt: 3 }}>
-        <Button startIcon={<AddIcon />} variant="outlined" onClick={(e) => setAnchorEl(e.currentTarget)}>
-          Add Block
-        </Button>
-        <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
-          
-          {/* Text & Lists */}
-          <MenuItem onClick={() => addBlock('paragraph')}>Text Paragraph</MenuItem>
-          <MenuItem onClick={() => addBlock('heading1')}>Heading 1</MenuItem>
-          <MenuItem onClick={() => addBlock('heading2')}>Heading 2</MenuItem>
-          <MenuItem onClick={() => addBlock('bullet_list')}>Bullet List</MenuItem>
-          <MenuItem onClick={() => addBlock('numbered_list')}>Numbered List</MenuItem>
-          
-          <MuiDivider />
-          
-          {/* Media & Code */}
-          <MenuItem onClick={() => addBlock('image')}>Image</MenuItem>
-          <MenuItem onClick={() => addBlock('equation')}>Math Equation</MenuItem>
-          <MenuItem onClick={() => addBlock('code')}>Code Block</MenuItem>
-          
-          <MuiDivider />
-
-          {/* Layout & Structure */}
-          <MenuItem onClick={() => addBlock('divider')}>Horizontal Divider</MenuItem>
-          <MenuItem onClick={() => addBlock('spacer')}>Empty Spacer</MenuItem>
-          <MenuItem onClick={() => addBlock('columns', 2)}>2-Column Layout</MenuItem>
-          <MenuItem onClick={() => addBlock('columns', 3)}>3-Column Layout</MenuItem>
-          <MenuItem onClick={() => addBlock('columns', 4)}>4-Column Layout</MenuItem>
-        
-        </Menu>
-      </Box>
+      {/* A tiny, subtle add button at the very bottom just for convenience */}
+      {blocks.length > 0 && (
+         <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+           <Button size="small" sx={{ color: '#ccc', '&:hover': { color: 'primary.main' } }} onClick={() => insertBlock(blocks.length - 1, 'paragraph')}>
+             + Click here to add another block
+           </Button>
+         </Box>
+      )}
     </Box>
   );
 }

@@ -13,11 +13,15 @@ import { ColumnData, BlockType, Block } from '@/app/data/projectsData'; // Updat
 import BlockEditor from './BlockEditor'; 
 
 // Wrapper for blocks INSIDE columns
-function SortableColumnBlock({ block, onChange, onRemove }: { block: Block, onChange: (b: Block) => void, onRemove: () => void }) {
+function SortableColumnBlock({ 
+  block, onChange, onRemove, onInsertBelow 
+}: { 
+  block: Block, onChange: (b: Block) => void, onRemove: () => void, onInsertBelow: (type: BlockType, cols?: number) => void 
+}) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: block.id });
   return (
     <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }}>
-      <BlockEditor block={block} onChange={onChange} onRemove={onRemove} dragHandleProps={{ ...attributes, ...listeners }} />
+      <BlockEditor block={block} onChange={onChange} onRemove={onRemove} onInsertBelow={onInsertBelow} dragHandleProps={{ ...attributes, ...listeners }} />
     </div>
   );
 }
@@ -113,6 +117,13 @@ export default function ResizableColumns({ columns, onChange }: { columns: Colum
                       newCols[colIdx].blocks.splice(bIdx, 1);
                       onChange(newCols);
                     }} 
+                    onInsertBelow={(type, cols) => {
+                      // Inserts a new block inside the column!
+                      const newBlock: Block = { id: uuidv4(), type, content: '' };
+                      const newCols = [...columns];
+                      newCols[colIdx].blocks.splice(bIdx + 1, 0, newBlock);
+                      onChange(newCols);
+                    }}
                   />
                 ))}
               </SortableContext>
