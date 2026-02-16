@@ -197,6 +197,9 @@ export default function BlockEditor({ block, onChange, onRemove, onInsertBelow, 
         <MenuItem onClick={() => handleMenuClick('equation')}><ListItemText primary="Math Equation" secondary="Display LaTeX math." /></MenuItem>
         <MenuItem onClick={() => handleMenuClick('code')}><ListItemText primary="Code" secondary="Capture a code snippet." /></MenuItem>
         <MenuItem onClick={() => handleMenuClick('divider')}><ListItemText primary="Divider" secondary="Visually divide blocks." /></MenuItem>
+        <MenuItem onClick={() => handleMenuClick('spacer')}>
+  <ListItemText primary="Empty Spacer" secondary="Add a blank vertical space." />
+</MenuItem>
         
         <Divider />
         <Typography variant="overline" sx={{ px: 2, color: 'text.disabled' }}>Columns</Typography>

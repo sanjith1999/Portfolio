@@ -31,7 +31,7 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
     <Box sx={{ 
       '.ql-container': { fontSize: '1rem', fontFamily: 'inherit', border: 'none' },
       '.ql-toolbar': { border: 'none', borderBottom: '1px solid #eee', padding: '4px 8px' },
-      '.ql-editor': { padding: '12px 0', minHeight: '80px' }, 
+      '.ql-editor': { padding: '4px 0', minHeight: 'auto', height: 'auto' },
       border: '1px solid #eee', 
       borderRadius: 1,
       bgcolor: 'background.paper'

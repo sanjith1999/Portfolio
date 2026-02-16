@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import {
   Box, Button, Container, Drawer, Fab, IconButton, List,
   ListItem, ListItemButton, ListItemIcon, ListItemText,
@@ -10,8 +10,8 @@ import {
 import MenuIcon from '@mui/icons-material/Menu';
 import CircleIcon from '@mui/icons-material/Circle';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import EditIcon from '@mui/icons-material/Edit';
 import { BlockMath } from 'react-katex';
-import { useRouter } from 'next/navigation';
 
 import 'react-quill-new/dist/quill.snow.css'; 
 
@@ -19,7 +19,6 @@ import { Project, Block } from '@/app/data/projectsData';
 import { useProjectStore } from '@/store/public-project-store';
 import LoadingBackdrop from './LoadingBackdrop';
 import { User } from '../models/user';
-import EditIcon from '@mui/icons-material/Edit';
 
 // Safely strips HTML from legacy rich-text headings for the TOC & Viewer
 const stripHtml = (html?: string | string[]) => {
@@ -33,7 +32,6 @@ export default function ProjectPreview() {
   const params = useParams();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
   
-  // Theme hook to detect if Dark Mode is active
   const theme = useTheme();
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
   
@@ -42,7 +40,8 @@ export default function ProjectPreview() {
   const [open, setOpen] = useState(false);
   const [loadingProject, setProjectLoading] = useState(false);
   const [user, setUser] = useState<User | null>(null);
-const router = useRouter();
+  const router = useRouter();
+
   const handleScroll = (blockId: string) => {
     const element = document.getElementById(blockId);
     if (element) {
@@ -69,12 +68,11 @@ const router = useRouter();
     fetchProject();
   }, [id, project]);
 
-    // 1️⃣ Auth check
-    useEffect(() => {
-      fetch('/api/auth/me')
-        .then((res) => res.json())
-        .then((data) => setUser(data));
-    }, []);
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((res) => res.json())
+      .then((data) => setUser(data));
+  }, []);
 
   if (!project) return <Container sx={{ py: 8 }}><Typography>Loading project...</Typography></Container>;
   if (loadingProject) return <LoadingBackdrop open={loadingProject} />;
@@ -82,42 +80,20 @@ const router = useRouter();
   const blocks = project.blocks || [];
   const tocHeadings = blocks.filter(b => b.type === 'heading1' || b.type === 'heading2');
 
-  // =========================================================
-  // RECURSIVE BLOCK RENDERER
-  // (Added `isNested` flag to tighten spacing inside columns)
-  // =========================================================
   const renderBlock = (block: Block, isNested = false) => {
     const content = block.content || '';
     
     switch (block.type) {
       case 'heading1':
         return (
-          <Typography 
-            key={block.id} id={block.id} variant="h4" 
-            sx={{ 
-              mt: isNested ? 2 : 5, 
-              mb: isNested ? 1 : 2, 
-              fontWeight: 'bold', 
-              scrollMarginTop: '80px', 
-              color: 'primary.main' 
-            }} 
-          >
+          <Typography key={block.id} id={block.id} variant="h4" sx={{ mt: isNested ? 2 : 5, mb: isNested ? 1 : 2, fontWeight: 'bold', scrollMarginTop: '80px', color: 'primary.main' }}>
             {stripHtml(content as string)}
           </Typography>
         );
       
       case 'heading2':
         return (
-          <Typography 
-            key={block.id} id={block.id} variant="h5" 
-            sx={{ 
-              mt: isNested ? 2 : 4, 
-              mb: isNested ? 1 : 2, 
-              fontWeight: '600', 
-              scrollMarginTop: '80px',
-              color: 'text.primary'
-            }} 
-          >
+          <Typography key={block.id} id={block.id} variant="h5" sx={{ mt: isNested ? 2 : 4, mb: isNested ? 1 : 2, fontWeight: '600', scrollMarginTop: '80px', color: 'text.primary' }}>
             {stripHtml(content as string)}
           </Typography>
         );
@@ -126,25 +102,23 @@ const router = useRouter();
         return (
           <Box 
             key={block.id} 
-            className="ql-editor" // Applies Quill sizes/colors/alignments
+            className="ql-editor" 
             sx={{ 
+              height: 'auto !important', // 🔥 FIX: Kills the 100% column stretching bug!
               padding: '0 !important', 
               margin: '0 !important',
-              marginBottom: isNested ? '6px !important' : '16px !important', 
+              // 1️⃣ Controls space below the ENTIRE block (Increase the 12px to your liking)
+              marginBottom: isNested ? '16px !important' : '16px !important',
               lineHeight: 1.7, 
               fontSize: '1.1rem', 
               color: 'text.primary',
-              
-              // 🔥 Set default to justify, but allow Quill's alignment classes to override it!
               textAlign: 'justify',
-              
-              // Nuclear option to strip margins, but WITHOUT forcing text-align so center/right works
               '& p, & h1, & h2, & h3, & h4, & h5, & h6': { 
                 margin: '0 !important', 
                 padding: '0 !important' 
               }, 
               '& p + p': {
-                marginTop: '6px !important' 
+                marginTop: '16px !important' 
               },
               '& a': { color: 'primary.main' } 
             }} 
@@ -163,10 +137,7 @@ const router = useRouter();
                     <CircleIcon sx={{ fontSize: 8, color: 'text.secondary' }} />
                   </ListItemIcon>
                 )}
-                <ListItemText 
-                   primary={item} 
-                   primaryTypographyProps={{ sx: { fontSize: '1.1rem', lineHeight: 1.8, textAlign: 'justify' } }} 
-                />
+                <ListItemText primary={item} primaryTypographyProps={{ sx: { fontSize: '1.1rem', lineHeight: 1.8, textAlign: 'justify' } }} />
               </ListItem>
             ))}
           </List>
@@ -176,9 +147,7 @@ const router = useRouter();
         return (
           <Box key={block.id} sx={{ my: isNested ? 2 : 4, textAlign: block.props?.align || 'center' }}>
             <Box component="img" src={content as string} alt={block.props?.caption || "Project Image"} sx={{ maxWidth: '100%', borderRadius: 2, boxShadow: theme.palette.mode === 'dark' ? '0 4px 20px rgba(0,0,0,0.5)' : 1 }} />
-            {block.props?.caption && (
-              <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 1 }}>{block.props.caption}</Typography>
-            )}
+            {block.props?.caption && <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 1 }}>{block.props.caption}</Typography>}
           </Box>
         );
 
@@ -196,7 +165,6 @@ const router = useRouter();
           <Box key={block.id} sx={{ display: 'flex', flexWrap: { xs: 'wrap', md: 'nowrap' }, gap: 3, my: isNested ? 2 : 4 }}>
             {block.columns.map((col) => (
               <Box key={col.id} sx={{ width: { xs: '100%', md: `${col.width}%` }, boxSizing: 'border-box' }}>
-                {/* Notice we pass TRUE for isNested here! */}
                 {col.blocks.map(nestedBlock => renderBlock(nestedBlock, true))}
               </Box>
             ))}
@@ -214,7 +182,7 @@ const router = useRouter();
         return <Box key={block.id} sx={{ my: isNested ? 2 : 4, borderBottom: '2px solid', borderColor: 'divider' }} />;
 
       case 'spacer':
-        return <Box key={block.id} sx={{ height: '24px' }} />;
+        return <Box key={block.id} sx={{ height: '40px' }} />; // Render logic for spacer
 
       default:
         return null;
@@ -222,7 +190,6 @@ const router = useRouter();
   };
 
   return (
-    // Dynamic background default based on Light/Dark Mode
     <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, height: '100vh', overflow: 'hidden', bgcolor: 'background.default' }}>
       
       {/* Sidebar TOC */}
@@ -233,15 +200,7 @@ const router = useRouter();
             <List sx={{ mt: 2 }}>
               {tocHeadings.map((heading) => (
                 <ListItemButton key={heading.id} onClick={() => handleScroll(heading.id)} sx={{ borderRadius: 1, mb: 0.5 }}>
-                  <ListItemText 
-                    primary={stripHtml(heading.content)} 
-                    primaryTypographyProps={{ 
-                      fontSize: heading.type === 'heading2' ? '0.9rem' : '1rem',
-                      fontWeight: heading.type === 'heading1' ? '600' : '400',
-                      ml: heading.type === 'heading2' ? 2 : 0, 
-                      color: 'text.secondary'
-                    }} 
-                  />
+                  <ListItemText primary={stripHtml(heading.content)} primaryTypographyProps={{ fontSize: heading.type === 'heading2' ? '0.9rem' : '1rem', fontWeight: heading.type === 'heading1' ? '600' : '400', ml: heading.type === 'heading2' ? 2 : 0, color: 'text.secondary' }} />
                 </ListItemButton>
               ))}
             </List>
@@ -259,15 +218,7 @@ const router = useRouter();
               <List>
                 {tocHeadings.map((heading) => (
                   <ListItemButton key={heading.id} onClick={() => handleScroll(heading.id)} sx={{ borderRadius: 1, py: 0.5 }}>
-                    <ListItemText 
-                      primary={stripHtml(heading.content)} 
-                      primaryTypographyProps={{ 
-                        fontSize: heading.type === 'heading2' ? '0.85rem' : '0.95rem',
-                        fontWeight: heading.type === 'heading1' ? '600' : '400',
-                        ml: heading.type === 'heading2' ? 2 : 0,
-                        color: heading.type === 'heading1' ? 'text.primary' : 'text.secondary'
-                      }} 
-                    />
+                    <ListItemText primary={stripHtml(heading.content)} primaryTypographyProps={{ fontSize: heading.type === 'heading2' ? '0.85rem' : '0.95rem', fontWeight: heading.type === 'heading1' ? '600' : '400', ml: heading.type === 'heading2' ? 2 : 0, color: heading.type === 'heading1' ? 'text.primary' : 'text.secondary' }} />
                   </ListItemButton>
                 ))}
               </List>
@@ -279,14 +230,7 @@ const router = useRouter();
       {/* Main Content Area */}
       <Box sx={{ flexGrow: 1, height: '100%', overflowY: 'auto', p: { xs: 2, md: 6 }, scrollBehavior: 'smooth' }}>
         
-        {/* {!open && !isSmallScreen && (
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 5, position: 'sticky', top: 0, bgcolor: 'background.default', zIndex: 10, py: 2 }}>
-            <IconButton onClick={() => setOpen(true)} sx={{ bgcolor: 'background.paper', boxShadow: 1, '&:hover': { bgcolor: 'action.hover' } }}>
-              <MenuIcon />
-            </IconButton>
-          </Box>
-        )} */}
-          {!open && !isSmallScreen && (
+        {!open && !isSmallScreen && (
           <Fab color="primary" onClick={() => setOpen(!open)} sx={{ position: 'fixed', left: 24, top: 100, zIndex: 1200 }}>
           {open ? <ChevronLeftIcon /> : <MenuIcon />}
         </Fab>
@@ -297,14 +241,13 @@ const router = useRouter();
         </Fab>
         )}
 
-        {user?.loggedIn  &&(
-          <Fab color="primary"  onClick={() => router.push(`/admin/projects/${id}`)}  sx={{ position: 'fixed', right: 30, top: 100, zIndex: 1200 }}>
+        {user?.loggedIn && (
+          <Fab color="primary" onClick={() => router.push(`/admin/projects/${id}`)} sx={{ position: 'fixed', right: 30, top: 100, zIndex: 1200 }}>
           <EditIcon />
         </Fab>
         )}
 
         <Box sx={{ maxWidth: '1500px', mx: 'auto', mt: isSmallScreen ? 2 : 0 }}>
-          {/* Paper respects Dark Mode by using background.paper and generic divider colors */}
           <Paper elevation={0} sx={{ p: { xs: 3, md: 8 }, borderRadius: 4, bgcolor: 'background.paper', minHeight: '80vh', border: '1px solid', borderColor: 'divider' }}>              
             <Typography variant="h3" fontWeight="bold" color="text.primary" gutterBottom sx={{ mb: 4 }}>
               {project.title}
