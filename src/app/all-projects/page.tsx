@@ -122,7 +122,7 @@ export default function AllProjects() {
           ← Back to Home
         </Button> */}
         <Typography variant="h4" gutterBottom>
-          All Projects
+          All Ideas
         </Typography>
         <Typography variant="subtitle1" color="text.secondary">
           Explore my complete portfolio of work and projects

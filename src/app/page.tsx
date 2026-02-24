@@ -157,7 +157,7 @@ export default function HomePage() {
       {/* Projects Section */}
       <Container id="projects" sx={{ py: 8 }}>
         <Typography variant="h4" align="center" gutterBottom>
-          Recent Projects
+          Ideas
         </Typography>
         <Grid container spacing={4}>
           {loadingProjects
@@ -217,7 +217,7 @@ export default function HomePage() {
         </Grid>
         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
           <Button variant="contained" onClick={() => handleViewAllDetails()}>
-            View All Projects →
+            View All →
           </Button>
         </Box>
       </Container>

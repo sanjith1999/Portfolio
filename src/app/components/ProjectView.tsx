@@ -98,31 +98,65 @@ export default function ProjectPreview() {
           </Typography>
         );
 
-     case 'paragraph':
+    case 'paragraph':
+        // Clean up hidden characters that rich text editors often leave behind
+        const cleanContent = (content as string)
+          .replace(/&nbsp;/g, ' ') 
+          .replace(/[\u200B-\u200D\uFEFF]/g, ''); 
+
         return (
           <Box 
             key={block.id} 
             className="ql-editor" 
+            lang="en" // Required for 'hyphens: auto'
             sx={{ 
-              height: 'auto !important', // 🔥 FIX: Kills the 100% column stretching bug!
+              height: 'auto !important', 
               padding: '0 !important', 
               margin: '0 !important',
-              // 1️⃣ Controls space below the ENTIRE block (Increase the 12px to your liking)
               marginBottom: isNested ? '16px !important' : '16px !important',
+              
               lineHeight: 1.7, 
-              fontSize: '1.1rem', 
+              fontSize: '1.125rem', 
               color: 'text.primary',
-              textAlign: 'justify',
+              
+              // --- BASE WRAPPING RULES (Applies to ALL alignments) ---
+              // This stops words from being abruptly cut in half
+              wordBreak: 'normal !important',        
+              overflowWrap: 'break-word !important', 
+              whiteSpace: 'normal !important',       
+              hyphens: 'auto !important',            
+              WebkitHyphens: 'auto !important',      
+              // -------------------------------------------------------
+
+              '& p, & span': {
+                wordBreak: 'normal !important',
+                whiteSpace: 'normal !important',
+              },
               '& p, & h1, & h2, & h3, & h4, & h5, & h6': { 
                 margin: '0 !important', 
                 padding: '0 !important' 
               }, 
               '& p + p': {
-                marginTop: '16px !important' 
+                marginTop: '1.2em !important' 
               },
-              '& a': { color: 'primary.main' } 
+              '& a': { 
+                color: 'primary.main',
+                textDecoration: 'none',
+              },
+
+              // --- LATEX-STYLE JUSTIFICATION (Applies ONLY to Justified text) ---
+              // Quill uses the .ql-align-justify class when you click the justify button
+              '& .ql-align-justify': {
+                textAlign: 'justify !important',
+                textJustify: 'inter-word !important', // Distributes space between words
+              },
+              // Fallback just in case Quill uses inline styles instead of classes
+              '& [style*="text-align: justify"]': {
+                textJustify: 'inter-word !important',
+              }
+              // ------------------------------------------------------------------
             }} 
-            dangerouslySetInnerHTML={{ __html: content as string }} 
+            dangerouslySetInnerHTML={{ __html: cleanContent }} 
           />
         );
       case 'bullet_list':
@@ -252,9 +286,6 @@ export default function ProjectPreview() {
             <Typography variant="h3" fontWeight="bold" color="text.primary" gutterBottom sx={{ mb: 4 }}>
               {project.title}
             </Typography>
-            {project.image && (
-              <Box component="img" src={project.image} sx={{ width: '100%', maxHeight: '400px', objectFit: 'cover', borderRadius: 3, mb: 6 }} />
-            )}
 
             {blocks.map((block) => renderBlock(block))}
             

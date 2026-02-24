@@ -90,9 +90,6 @@ export default function ProjectForm({
             <TextField label="Title" fullWidth value={title} onChange={(e) => setTitle(e.target.value)} required />
             <FormControlLabel sx={{ mt: 1 }} control={<Switch checked={visibility} onChange={(e) => setVisibility(e.target.checked)} color="success" />} label={visibility ? 'Publicly Visible' : 'Hidden Draft'} />
           </Grid>
-          <Grid size={{ xs: 12 , md :4}}>
-            <TextField label="Role" fullWidth value={role} onChange={(e) => setRole(e.target.value)} />
-          </Grid>
 
           <Grid size={{ xs: 12}}>
             <TextField label="Short description" fullWidth value={description} onChange={(e) => setDescription(e.target.value)} />
@@ -105,16 +102,10 @@ export default function ProjectForm({
           <Grid size={{ xs: 12, md :6}} ><TextField label="Github link" fullWidth value={githubLink} onChange={(e) => setGithubLink(e.target.value)} /></Grid>
           <Grid size={{ xs: 12, md :6}} ><TextField label="Live link" fullWidth value={liveLink} onChange={(e) => setLiveLink(e.target.value)} /></Grid>
           <Grid size={{ xs: 12, md :6}} ><TextField label="Duration" fullWidth value={duration} onChange={(e) => setDuration(e.target.value)} /></Grid>
-          <Grid size={{ xs: 12, md :6}} ><TextField label="Team size" fullWidth value={teamSize} onChange={(e) => setTeamSize(e.target.value)} /></Grid>
 
           {/* Dynamic Tags */}
           <Grid size={{ xs: 12, md :6}} >
             <TagsInput label="Technologies" tags={technologies} onChange={setTechnologies} placeholder="e.g. Next.js, React" />
-            <TagsInput label="Features" tags={features} onChange={setFeatures} />
-          </Grid>
-          <Grid size={{ xs: 12, md :6}} >
-            <TagsInput label="Challenges" tags={challenges} onChange={setChallenges} />
-            <TagsInput label="Solutions" tags={solutions} onChange={setSolutions} />
           </Grid>
 
           {/* Main Cover Image */}

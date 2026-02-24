@@ -35,7 +35,7 @@ function Header() {
           <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 2 }}>
             <Button onClick={() => handleNavClick('home')}>Home</Button>
             <Button onClick={() => handleNavClick('about')}>About</Button>
-            <Button onClick={() => handleNavClick('projects')}>Projects</Button>
+            <Button onClick={() => handleNavClick('projects')}>Ideas</Button>
             <Button onClick={() => handleNavClick('contact')}>Contact</Button>
           </Box>
           <IconButton
@@ -59,7 +59,7 @@ function Header() {
         >
           <Button onClick={() => handleNavClick('home')}>Home</Button>
           <Button onClick={() => handleNavClick('about')}>About</Button>
-          <Button onClick={() => handleNavClick('projects')}>Projects</Button>
+          <Button onClick={() => handleNavClick('projects')}>Ideas</Button>
           <Button onClick={() => handleNavClick('contact')}>Contact</Button>
         </Box>
       )}

@@ -23,7 +23,7 @@ function Type() {
     >
       <Typewriter
         options={{
-          strings: ['DSP/FPGA Engineer', 'ENTC Graduate'],
+          strings: ['DSP/FPGA Engineer'],
           autoStart: true,
           loop: true,
           deleteSpeed: 100,

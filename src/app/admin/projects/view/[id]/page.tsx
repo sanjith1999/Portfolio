@@ -52,7 +52,7 @@ export default function ProjectDetailPage() {
           </IconButton>
           <Box sx={{ flexGrow: 1 }} />
           <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button onClick={handleBackAllProject}>← View All Projects</Button>
+            <Button onClick={handleBackAllProject}>← View All</Button>
           </Box>
         </Toolbar>
       </AppBar>

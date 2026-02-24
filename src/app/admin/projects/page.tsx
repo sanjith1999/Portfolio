@@ -80,7 +80,7 @@ export default function ProjectsPage() {
       <AdminHeader />
       <Container sx={{ py: 4 }}>
         <Typography variant="h4" sx={{ mb: 3 }}>
-          Projects
+          Ideas
         </Typography>
 
         <Grid container spacing={3}>
