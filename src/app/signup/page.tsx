@@ -7,7 +7,6 @@ import axios from 'axios';
 
 export default function SignupPage() {
   // 1. Guard check: Trigger the built-in 404 page if in production
-  console.log("Current NODE_ENV:", process.env.NODE_ENV); // Debug log to check the environment variable
   if (process.env.NODE_ENV !== "development") {
     notFound(); 
   }
@@ -22,6 +21,7 @@ export default function SignupPage() {
     } catch (err) {
       console.error(err);
       alert('Error creating user');
+      console.log("Signup error details:", err); // Log detailed error info
     }
   };
 
