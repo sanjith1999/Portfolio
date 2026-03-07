@@ -4,6 +4,11 @@ import User from '@/app/models/user';
 import { connectToDatabase } from '@/lib/mongodb';
 
 export async function POST(req: Request) {
+  // 1. Guard check: If in production, return a 404 response immediately
+  if (process.env.NODE_ENV !== "development") {
+    return new NextResponse('Not Found', { status: 404 });
+  }
+
   try {
     const { email, password } = await req.json();
     await connectToDatabase();

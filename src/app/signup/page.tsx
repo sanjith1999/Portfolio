@@ -1,11 +1,17 @@
 'use client';
 
 import React, { useState } from 'react';
+import { notFound, useRouter } from 'next/navigation'; // Import notFound
 import { Container, TextField, Button, Typography, Box, Paper } from '@mui/material';
 import axios from 'axios';
-import { useRouter } from 'next/navigation';
 
 export default function SignupPage() {
+  // 1. Guard check: Trigger the built-in 404 page if in production
+  console.log("Current NODE_ENV:", process.env.NODE_ENV); // Debug log to check the environment variable
+  if (process.env.NODE_ENV !== "development") {
+    notFound(); 
+  }
+
   const router = useRouter();
   const [form, setForm] = useState({ email: '', password: '' });
 
@@ -23,7 +29,7 @@ export default function SignupPage() {
     <Container maxWidth="sm">
       <Paper sx={{ p: 4, mt: 6 }}>
         <Typography variant="h5" mb={2}>
-          Create Account
+          Create Account (Dev Mode Only)
         </Typography>
 
         <Box display="flex" flexDirection="column" gap={2}>
