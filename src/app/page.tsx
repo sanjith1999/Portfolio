@@ -115,7 +115,7 @@ export default function HomePage() {
         </Title>
         <Type />
         <Typography variant="h6" gutterBottom sx={{ maxWidth: 600 }}>
-          I am an aspiring Electronic Engineer who loves sharing my experience with community.
+          Enjoying the journey of building things and sharing the magical ideas that appear along the way.
         </Typography>
         <Button
           variant="contained"
@@ -136,10 +136,10 @@ export default function HomePage() {
           About Me
         </Typography>
         <Typography variant="body1" align="center" sx={{ maxWidth: 800, mx: 'auto' }}>
-          Working on advanced FPGA/DSP modem systems with involvement in the entire pipeline —
-          MATLAB modeling, system design, RTL development, and hardware deployment. This end-to-end
+          Working on PHY layer of advanced communication systems with involvement in the entire pipeline —
+          system design, MATLAB modeling, RTL development, and hardware deployment. This end-to-end
           responsibility has helped me build both the technical depth and the architectural view
-          needed to deliver efficient and reliable designs.
+          needed to deliver efficient and reliable solutions.
         </Typography>
       </Container>
 
