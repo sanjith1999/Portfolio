@@ -1,14 +1,22 @@
 import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import ProjectModel from '@/app/models/projects';
+import { requireAdmin } from '@/lib/api-auth';
+import { checkRateLimit } from '@/lib/rate-limit';
+import { validateObjectIdLike, validateProjectInput } from '@/lib/validation';
 
 // GET project by ID
-export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  // specific fix: await params before accessing properties
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const validatedId = validateObjectIdLike(id);
 
-  if (!id) {
-    return NextResponse.json({ error: 'ID not provided' }, { status: 400 });
+  if (!validatedId.ok) {
+    return NextResponse.json({ error: validatedId.error }, { status: 400 });
+  }
+
+  const rate = checkRateLimit(req, { keyPrefix: 'project:get', windowMs: 60_000, limit: 180 });
+  if (!rate.ok) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
   }
 
   await connectToDatabase();
@@ -18,6 +26,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     if (!project) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
+
+    if (!project.visibility) {
+      const unauthorized = requireAdmin(req);
+      if (unauthorized) return unauthorized;
+    }
+
     return NextResponse.json(project);
   } catch (error) {
     console.error(error);
@@ -27,18 +41,31 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
 // UPDATE project by ID
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  // specific fix: await params before accessing properties
-  const { id } = await params;
+  const unauthorized = requireAdmin(req);
+  if (unauthorized) return unauthorized;
 
-  if (!id) {
-    return NextResponse.json({ error: 'ID not provided' }, { status: 400 });
+  const rate = checkRateLimit(req, { keyPrefix: 'project:put', windowMs: 60_000, limit: 40 });
+  if (!rate.ok) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+  }
+
+  const { id } = await params;
+  const validatedId = validateObjectIdLike(id);
+
+  if (!validatedId.ok) {
+    return NextResponse.json({ error: validatedId.error }, { status: 400 });
   }
 
   await connectToDatabase();
 
   try {
     const body = await req.json();
-    const updated = await ProjectModel.findByIdAndUpdate(id, body, { new: true });
+    const parsed = validateProjectInput(body);
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
+    }
+
+    const updated = await ProjectModel.findByIdAndUpdate(id, parsed.data, { new: true });
 
     if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
@@ -51,11 +78,19 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
 // DELETE project by ID
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  // specific fix: await params before accessing properties
-  const { id } = await params;
+  const unauthorized = requireAdmin(_req);
+  if (unauthorized) return unauthorized;
 
-  if (!id) {
-    return NextResponse.json({ error: 'ID not provided' }, { status: 400 });
+  const rate = checkRateLimit(_req, { keyPrefix: 'project:delete', windowMs: 60_000, limit: 20 });
+  if (!rate.ok) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+  }
+
+  const { id } = await params;
+  const validatedId = validateObjectIdLike(id);
+
+  if (!validatedId.ok) {
+    return NextResponse.json({ error: validatedId.error }, { status: 400 });
   }
 
   await connectToDatabase();

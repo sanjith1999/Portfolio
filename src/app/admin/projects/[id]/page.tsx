@@ -5,18 +5,17 @@ import { useParams, useRouter } from 'next/navigation';
 import axios from 'axios';
 import { Container, Typography, Box, Button, Paper } from '@mui/material';
 import ProjectForm from '@/app/components/projectForm';
-import { Project } from '@/app/data/projectsData';
+import { Project } from '@/types/project';
 import Image from 'next/image';
 import AdminHeader from '@/app/components/adminHeader';
-import { usePrivateProjectStore } from '@/store/private-project-store';
-import { ProjectDoc } from '@/app/models/projects';
+import { useProjectStore } from '@/store/project-store';
 
 export default function ProjectDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
-  const getProject = usePrivateProjectStore((state) => state.getProjectById);
-  const [project, setProject] = useState<Project | null>(getProject(id || '') ?? null);
+  const getProject = useProjectStore((state) => state.getProjectById);
+  const [project, setProject] = useState<Project | null>(getProject(id || '', 'private') ?? null);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [user, setUser] = useState<any>(null);
@@ -111,7 +110,7 @@ export default function ProjectDetailPage() {
           initial={{
             ...project,
             _id: typeof project._id === 'string' ? project._id : project._id,
-          } as Partial<ProjectDoc>}
+          }}
           submitLabel="Update"
           submitMethod="PUT"
           onSaved={(updated) => {

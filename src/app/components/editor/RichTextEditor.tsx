@@ -7,7 +7,7 @@ import 'react-quill-new/dist/quill.snow.css';
 import { Box } from '@mui/material';
 
 // Dynamically import the React 19 compatible version
-const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false }) as any; 
+const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false });
 
 interface RichTextEditorProps {
   value: string;

@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import HomeIcon from '@mui/icons-material/Home';
 
@@ -23,11 +23,9 @@ import {
   IconButton,
 } from '@mui/material';
 import axios from 'axios';
-import { Project } from '../data/projectsData';
 import LoadingBackdrop from '../components/LoadingBackdrop';
 import ProjectCardSkeleton from '../components/ProjectSkeliton';
-import { useProjectStore } from '@/store/public-project-store';
-import { Types } from 'mongoose';
+import { useProjectStore } from '@/store/project-store';
 
 export default function AllProjects() {
   const [filter, setFilter] = useState('all');
@@ -42,39 +40,31 @@ export default function AllProjects() {
   //   window.scrollTo(0, 0);
   //   router.push(`/project/${projectId}`);
   // };
-  const handleViewDetails = (projectId: string | Types.ObjectId | undefined) => {
+  const handleViewDetails = (projectId: string | undefined) => {
     setLoading(true);
     window.scrollTo(0, 0);
 
     router.push(`/project/${projectId}`);
   };
 
-  // const allProjects = projectsData
+  const allProjects = useProjectStore((state) => state.publicProjects);
+  const setProjects = useProjectStore((state) => state.setProjects);
 
-  const [allProjects, setProjects] = useState<Project[]>(
-    useProjectStore((state) => state.projects)
-  );
-  const setPublicProjects = useProjectStore((state) => state.setProjects);
-  // async function fetchAll() {
-  //   const res = await axios.get('/api/projects/visible');
-  //   setProjects(res.data);
-  // }
-  async function fetchAll() {
+  const fetchAll = useCallback(async () => {
     if (!allProjects || allProjects.length === 0) {
       try {
         setLoadingProjects(true);
         const res = await axios.get('/api/projects/visible');
-        setProjects(res.data);
-        setPublicProjects(res.data);
+        setProjects('public', res.data.items ?? []);
       } finally {
         setLoadingProjects(false);
       }
     }
-  }
+  }, [allProjects, setProjects]);
 
   useEffect(() => {
     fetchAll();
-  });
+  }, [fetchAll]);
 
   useEffect(() => {
     // This runs only when the page mounts

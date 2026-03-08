@@ -18,19 +18,16 @@ import {
   Typography,
 } from '@mui/material';
 import { useRouter } from 'next/navigation';
-import * as React from 'react';
-import { Project } from './data/projectsData';
 
 import Type from '@/app/components/type';
-import { useProjectStore } from '@/store/public-project-store';
+import { useProjectStore } from '@/store/project-store';
 import axios from 'axios';
 import { motion } from 'framer-motion';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import styled from 'styled-components';
 import Header from './components/header';
 import LoadingBackdrop from './components/LoadingBackdrop';
 import ProjectCardSkeleton from './components/ProjectSkeliton';
-import { Types } from 'mongoose';
 const Title = styled(motion.h1)`
   font-size: 3.5rem;
   margin-bottom: 1rem;
@@ -42,33 +39,27 @@ const Title = styled(motion.h1)`
 `;
 
 export default function HomePage() {
-  const [projects, setProjects] = useState<Project[]>(useProjectStore((state) => state.projects));
+  const projects = useProjectStore((state) => state.publicProjects);
+  const setProjects = useProjectStore((state) => state.setProjects);
   const [loading, setLoading] = useState(false);
   const [loadingProjects, setLoadingProjects] = useState(false);
-  // const publicProjects = useProjectStore((state) => state.projects);
-  const setPublicProjects = useProjectStore((state) => state.setProjects);
-  // async function fetchAll() {
-  //   const res = await axios.get('/api/projects/visible');
-  //   setProjects(res.data);
-  // }
-  async function fetchAll() {
+
+  const fetchAll = useCallback(async () => {
     if (!projects || projects.length === 0) {
       try {
         setLoadingProjects(true);
         const res = await axios.get('/api/projects/visible');
-        setProjects(res.data);
-        setPublicProjects(res.data);
+        setProjects('public', res.data.items ?? []);
       } finally {
         setLoadingProjects(false);
       }
     }
-  }
+  }, [projects, setProjects]);
 
   useEffect(() => {
     fetchAll();
-  });
+  }, [fetchAll]);
 
-  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const router = useRouter();
   const recentProjects = projects.slice(0, 3);
   const handleNavClick = (id: string) => {
@@ -76,11 +67,9 @@ export default function HomePage() {
     if (section) {
       section.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-    console.log(mobileMenuOpen);
-    setMobileMenuOpen(false);
   };
 
-  const handleViewDetails = (projectId: string | Types.ObjectId | undefined) => {
+  const handleViewDetails = (projectId: string | undefined) => {
     setLoading(true);
     window.scrollTo(0, 0);
 

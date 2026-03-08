@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
-  Box, Button, Container, Drawer, Fab, IconButton, List,
+  Box, Container, Drawer, Fab, IconButton, List,
   ListItem, ListItemButton, ListItemIcon, ListItemText,
   Paper, Typography, useMediaQuery, useTheme, Zoom,
 } from '@mui/material';
@@ -15,8 +15,8 @@ import { BlockMath } from 'react-katex';
 
 import 'react-quill-new/dist/quill.snow.css'; 
 
-import { Project, Block } from '@/app/data/projectsData'; 
-import { useProjectStore } from '@/store/public-project-store';
+import { Block, Project } from '@/types/project';
+import { useProjectStore } from '@/store/project-store';
 import LoadingBackdrop from './LoadingBackdrop';
 import { User } from '../models/user';
 

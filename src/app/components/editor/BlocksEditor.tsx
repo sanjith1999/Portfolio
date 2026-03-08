@@ -10,7 +10,7 @@ import { arrayMove, SortableContext, verticalListSortingStrategy, useSortable } 
 import { CSS } from '@dnd-kit/utilities';
 
 import BlockEditor from './BlockEditor'; 
-import { Block, BlockType } from '@/app/data/projectsData';
+import { Block, BlockType } from '@/types/project';
 
 // Wrapper to make individual blocks draggable
 function SortableBlockWrapper({ 

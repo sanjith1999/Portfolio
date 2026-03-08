@@ -1,57 +1,8 @@
 // models/Project.ts
 import mongoose, { Document, Model } from 'mongoose';
+import type { Project } from '@/types/project';
 
-// ==========================================
-// TYPESCRIPT INTERFACES
-// ==========================================
-
-export type BlockType = 
-  | 'paragraph' 
-  | 'heading1' 
-  | 'heading2' 
-  | 'bullet_list' 
-  | 'numbered_list' 
-  | 'image' 
-  | 'equation' 
-  | 'columns'
-  | 'code'       // <-- NEW
-  | 'divider'    // <-- NEW
-  | 'spacer';
-
-export interface Block {
-  id: string;
-  type: BlockType;
-  content?: string | string[]; // Text, array of list items, or image URL. Optional because 'columns' type might not have content.
-  props?: {
-    align?: 'left' | 'center' | 'right';
-    caption?: string;
-  };
-  columns?: ColumnData[]; // Used only if type === 'columns'
-}
-
-export interface ColumnData {
-  id: string;
-  width: number; // Percentage (e.g., 50)
-  blocks: Block[]; // Nested blocks inside this column
-}
-
-// Project document interface
-export interface ProjectDoc extends Document {
-  visibility: boolean;
-  title: string;
-  description: string;
-  longDescription: string;
-  technologies: string[];
-  features: string[];
-  challenges: string[];
-  solutions: string[];
-  image?: string; // Main project cover image URL
-  githubLink?: string;
-  liveLink?: string;
-  duration?: string;
-  teamSize?: string;
-  role?: string;
-  blocks: Block[]; // Replaces old 'sections'
+export interface ProjectDoc extends Omit<Project, '_id' | 'createdAt' | 'updatedAt'>, Document {
   createdAt: Date;
   updatedAt: Date;
 }

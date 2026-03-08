@@ -12,7 +12,7 @@ import {
 import { arrayMove, SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-import { ColumnData, BlockType, Block } from '@/app/data/projectsData'; // Adjust path if needed
+import { ColumnData, BlockType, Block } from '@/types/project'; // Adjust path if needed
 import BlockEditor from './BlockEditor'; 
 
 // 1. Wrapper for blocks INSIDE columns
@@ -71,13 +71,13 @@ export default function ResizableColumns({ columns, onChange }: { columns: Colum
       const rightCol = columns[index + 1];
       const combinedWidth = leftCol.width + rightCol.width;
 
-      let totalWidthPx = containerRect.width;
-      let mouseXPercentage = ((e.clientX - containerRect.left) / totalWidthPx) * 100;
-      let widthBefore = columns.slice(0, index).reduce((acc, col) => acc + col.width, 0);
+      const totalWidthPx = containerRect.width;
+      const mouseXPercentage = ((e.clientX - containerRect.left) / totalWidthPx) * 100;
+      const widthBefore = columns.slice(0, index).reduce((acc, col) => acc + col.width, 0);
       let newLeftWidth = mouseXPercentage - widthBefore;
       
       newLeftWidth = Math.max(10, Math.min(newLeftWidth, combinedWidth - 10));
-      let newRightWidth = combinedWidth - newLeftWidth;
+      const newRightWidth = combinedWidth - newLeftWidth;
 
       const newCols = [...columns];
       newCols[index] = { ...leftCol, width: newLeftWidth };
@@ -214,7 +214,7 @@ export default function ResizableColumns({ columns, onChange }: { columns: Colum
                       newCols[colIdx].blocks.splice(bIdx, 1);
                       onChange(newCols);
                     }} 
-                    onInsertBelow={(type, childCols) => {
+                    onInsertBelow={(type, _childCols) => {
                       const newBlock: Block = { id: uuidv4(), type, content: '' };
                       const newCols = [...columns];
                       newCols[colIdx].blocks.splice(bIdx + 1, 0, newBlock);

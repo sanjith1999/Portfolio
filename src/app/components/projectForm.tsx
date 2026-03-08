@@ -6,16 +6,13 @@ import axios from 'axios';
 import Image from 'next/image';
 import { Box, Button, FormControlLabel, Grid, Paper, Switch, TextField, Typography } from '@mui/material';
 
-import type { ProjectDoc } from '@/app/models/projects';
-// import { Project, Block } from '@/types/editor'; // Updated to use your new Block types!
 import { fileToDataUrl } from '../utils/fileHelpers';
 import TagsInput from './TagsInput';
-import { Block, Project } from '../data/projectsData';
+import { Block, Project, ProjectInput } from '@/types/project';
 import BlocksEditor from './editor/BlocksEditor';
-// import BlocksEditor from './editor/BlocksEditor'; // <-- We will create this below
 
 type FormProps = {
-  initial?: Partial<ProjectDoc>;
+  initial?: Partial<Project>;
   onSaved?: (project: Project) => void;
   submitLabel?: string;
   submitMethod?: 'POST' | 'PUT';
@@ -37,15 +34,15 @@ export default function ProjectForm({
   const [githubLink, setGithubLink] = useState(initial.githubLink ?? '');
   const [liveLink, setLiveLink] = useState(initial.liveLink ?? '');
   const [duration, setDuration] = useState(initial.duration ?? '');
-  const [teamSize, setTeamSize] = useState(initial.teamSize ?? '');
-  const [role, setRole] = useState(initial.role ?? '');
+  const teamSize = initial.teamSize ?? '';
+  const role = initial.role ?? '';
   const [image, setImage] = useState<string | undefined>(initial.image);
 
   // Arrays handled by TagsInput
   const [technologies, setTechnologies] = useState<string[]>(initial.technologies ?? []);
-  const [features, setFeatures] = useState<string[]>(initial.features ?? []);
-  const [challenges, setChallenges] = useState<string[]>(initial.challenges ?? []);
-  const [solutions, setSolutions] = useState<string[]>(initial.solutions ?? []);
+  const features = initial.features ?? [];
+  const challenges = initial.challenges ?? [];
+  const solutions = initial.solutions ?? [];
 
   // 🔥 NEW: Blocks State (Replaces Sections)
   const [blocks, setBlocks] = useState<Block[]>(initial.blocks ?? []);
@@ -59,7 +56,7 @@ export default function ProjectForm({
     if (e) e.preventDefault();
     
     // Update payload to send blocks instead of sections
-    const payload: Project = {
+    const payload: ProjectInput = {
       visibility, title, description, longDescription, technologies,
       features, challenges, solutions, image, githubLink, liveLink,
       duration, teamSize, role, blocks, 
@@ -71,9 +68,10 @@ export default function ProjectForm({
         : await axios.put(`/api/projects/${id}`, payload);
       
       if (onSaved) onSaved(res.data);
-    } catch (err: any) {
+    } catch (err) {
+      const error = err as { response?: { data?: { error?: string } }; message?: string };
       console.error(err);
-      alert('Failed to save: ' + (err?.response?.data?.error || err?.message));
+      alert('Failed to save: ' + (error.response?.data?.error || error.message));
     }
   };
 

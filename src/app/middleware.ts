@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { verifyToken } from '@/lib/auth';
+import { isAdminToken } from '@/lib/authz';
 
 export function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
@@ -15,11 +15,7 @@ export function middleware(req: NextRequest) {
     }
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const decoded: any = verifyToken(token);
-
-      // Not admin → unauthorized
-      if (decoded.role !== 'admin') {
+      if (!isAdminToken(token)) {
         return NextResponse.redirect(new URL('/unauthorized', req.url));
       }
     } catch (err) {

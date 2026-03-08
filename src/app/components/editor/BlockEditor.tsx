@@ -8,7 +8,7 @@ import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import AddIcon from '@mui/icons-material/Add';
 import { BlockMath } from 'react-katex';
 
-import { Block, BlockType } from '@/app/data/projectsData'; // Update path if needed
+import { Block, BlockType } from '@/types/project'; // Update path if needed
 import ResizableColumns from './ResizableColumns';
 import RichTextEditor from './RichTextEditor';
 
@@ -17,7 +17,7 @@ interface BlockEditorProps {
   onChange: (block: Block) => void;
   onRemove: () => void;
   onInsertBelow: (type: BlockType, columnCount?: number) => void; // 🔥 NEW: Tells parent to add a block below this one
-  dragHandleProps?: any; 
+  dragHandleProps?: Record<string, unknown>;
 }
 
 export default function BlockEditor({ block, onChange, onRemove, onInsertBelow, dragHandleProps }: BlockEditorProps) {
@@ -112,7 +112,12 @@ export default function BlockEditor({ block, onChange, onRemove, onInsertBelow, 
           <Box sx={{ width: '100%' }}>
             {block.content ? (
               <Box sx={{ textAlign: block.props?.align || 'center', position: 'relative' }}>
-                <img src={block.content as string} alt="block" style={{ maxWidth: '100%', borderRadius: '8px' }} />
+                <Box
+                  component="img"
+                  src={block.content as string}
+                  alt="block"
+                  sx={{ maxWidth: '100%', borderRadius: '8px' }}
+                />
                 <Button size="small" variant="contained" color="error" sx={{ position: 'absolute', top: 8, right: 8 }} onClick={() => onChange({ ...block, content: '' })}>Clear</Button>
                 <TextField fullWidth placeholder="Add a caption..." variant="standard" size="small" value={block.props?.caption || ''} onChange={(e) => onChange({ ...block, props: { ...block.props, caption: e.target.value } })} inputProps={{ style: { textAlign: 'center', fontSize: '0.9rem', color: '#666' } }} sx={{ mt: 1 }} />
               </Box>
@@ -165,7 +170,11 @@ export default function BlockEditor({ block, onChange, onRemove, onInsertBelow, 
           </IconButton>
         </Tooltip>
         <Tooltip title="Drag to move">
-          <IconButton size="small" {...dragHandleProps} sx={{ cursor: 'grab', color: '#bdbdbd', '&:hover': { color: '#424242', bgcolor: 'rgba(0,0,0,0.04)' } }}>
+          <IconButton
+            size="small"
+            {...(dragHandleProps as Record<string, never>)}
+            sx={{ cursor: 'grab', color: '#bdbdbd', '&:hover': { color: '#424242', bgcolor: 'rgba(0,0,0,0.04)' } }}
+          >
             <DragIndicatorIcon fontSize="small" />
           </IconButton>
         </Tooltip>

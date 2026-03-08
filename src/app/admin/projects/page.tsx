@@ -14,17 +14,13 @@ import {
 } from '@mui/material';
 import ProjectForm from '../../components/projectForm';
 import { useRouter } from 'next/navigation';
-import { Project } from '@/app/data/projectsData';
 import AdminHeader from '@/app/components/adminHeader';
-import { usePrivateProjectStore } from '@/store/private-project-store';
-import { Types } from 'mongoose';
+import { useProjectStore } from '@/store/project-store';
 import { User } from '@/app/models/user';
 export default function ProjectsPage() {
-
   const [user, setUser] = useState<User | null>(null);
-  const [projects, setProjects] = useState<Project[]>(
-    usePrivateProjectStore((state) => state.projects)
-  );
+  const projects = useProjectStore((state) => state.privateProjects);
+  const setProjects = useProjectStore((state) => state.setProjects);
   const [creating, setCreating] = useState(false);
 
   const router = useRouter();
@@ -41,11 +37,11 @@ export default function ProjectsPage() {
     if (user?.loggedIn) {
       const fetchAll = async () => {
         const res = await axios.get('/api/projects');
-        setProjects(res.data);
+        setProjects('private', res.data.items ?? []);
       };
       fetchAll();
     }
-  }, [user]);
+  }, [setProjects, user]);
 
   if (!user) return <p>Loading...</p>;
 
@@ -63,14 +59,14 @@ export default function ProjectsPage() {
   async function fetchAll() {
     if (!projects || projects.length === 0) {
       const res = await axios.get('/api/projects');
-      setProjects(res.data);
+      setProjects('private', res.data.items ?? []);
     }
   }
 
-  const handleEditView = (projectId: string | Types.ObjectId | undefined) => {
+  const handleEditView = (projectId: string | undefined) => {
     router.push(`/admin/projects/${projectId}`);
   };
-  const handleView = (projectId: string | Types.ObjectId | undefined) => {
+  const handleView = (projectId: string | undefined) => {
     router.push(`/admin/projects/view/${projectId}`);
   };
 

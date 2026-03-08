@@ -4,10 +4,9 @@ import { useEffect, useState } from 'react';
 
 type User = {
   _id: string;
-  name: string;
   email: string;
-  age: number;
   role: string;
+  createdAt?: string;
 };
 
 export default function UsersPage() {
@@ -20,7 +19,7 @@ export default function UsersPage() {
         const res = await fetch('/api/users');
         const data = await res.json();
         if (data.success) {
-          setUsers(data.users);
+          setUsers(data.items ?? []);
         }
       } catch (err) {
         console.error('Failed to fetch users:', err);
@@ -40,11 +39,9 @@ export default function UsersPage() {
       <ul className="space-y-2">
         {users.map((user) => (
           <li key={user._id} className="p-3 border rounded-lg">
-            <p>
-              <strong>{user.name}</strong>
-            </p>
-            <p>{user.email}</p>
+            <p><strong>{user.email}</strong></p>
             <p>{user.role}</p>
+            {user.createdAt && <p>{new Date(user.createdAt).toLocaleString()}</p>}
           </li>
         ))}
       </ul>

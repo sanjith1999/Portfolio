@@ -1,36 +1,80 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Portfolio Website
 
-## Getting Started
+Personal portfolio site built with Next.js, TypeScript, Material UI, and MongoDB.
 
-First, run the development server:
+## What This App Includes
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Public portfolio pages with project cards and project detail view.
+- Admin area for creating/editing/deleting projects.
+- Rich block-based project editor (headings, text, lists, image, equation, code, columns).
+- JWT cookie authentication for admin-only operations.
+- Multiple UI themes with a floating theme selector.
+
+## Tech Stack
+
+- Framework: Next.js (App Router), React, TypeScript
+- UI: MUI, styled-components, framer-motion
+- Data: MongoDB via Mongoose
+- State: Zustand
+
+## Project Structure
+
+```text
+src/
+  app/
+    api/                  # Route handlers (auth, projects, uploads, images, users)
+    admin/                # Admin pages
+    components/           # Shared UI + editor components
+    models/               # Mongoose models
+  lib/                    # Auth, DB connection, validation, rate limit helpers
+  store/                  # Zustand stores
+  types/                  # Shared domain types (Project/Block)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Environment Variables
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Create `.env.local` with:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+MONGODB_URI=your_mongodb_connection_string
+JWT_SECRET=your_long_random_secret
+```
 
-## Learn More
+## Local Development
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm install
+npm run dev
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Open `http://localhost:3000`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Scripts
 
-## Deploy on Vercel
+- `npm run dev`: Start development server
+- `npm run build`: Build production app
+- `npm run start`: Start production server
+- `npm run lint`: Run ESLint
+- `npm run test`: Run node-based automated tests
+- `npm run format`: Format source files
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## API Notes
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Public read:
+  - `GET /api/projects/visible`
+  - `GET /api/projects/[id]` (only if project is visible, unless admin token exists)
+  - `GET /api/get-image?id=...`
+- Admin-protected:
+  - `GET/POST /api/projects`
+  - `PUT/DELETE /api/projects/[id]`
+  - `POST /api/upload`
+  - `GET/POST /api/users`
+
+All protected endpoints validate admin role from the JWT cookie (`token`).
+
+## Maintainability Guidelines
+
+- Keep shared project types in `src/types/project.ts` as the single source of truth.
+- Keep API logic in route handlers thin by using `src/lib/*` helpers.
+- Prefer adding validations in `src/lib/validation.ts` when request shapes evolve.
+- Add tests for any auth or data-flow change, especially around protected APIs.
